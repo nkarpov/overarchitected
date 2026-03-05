@@ -153,7 +153,24 @@ def render_episode(meta, blocks):
     if intro_html:
         body_parts.append(f'<div class="intro">\n  {"".join(intro_html)}\n</div>')
 
+    # Build Table of Contents
+    toc_items = []
+    toc_num = 0
+    skip_headings = ("The Thumb Incident", "The Final Architecture", "The Rating")
+    for b in blocks:
+        if b["type"] == "heading" and b["text"] not in skip_headings:
+            toc_num += 1
+            sm = build_section_meta(sections, b["text"])
+            tag_html = ""
+            if sm and sm.get("tag"):
+                tag_html = f' <span class="toc-tag">{sm["tag"]}</span>'
+            slug = f'section-{toc_num}'
+            toc_items.append(f'<a href="#{slug}"><span class="toc-num">{toc_num:02d}</span>{b["text"]}{tag_html}</a>')
+    if toc_items:
+        body_parts.append('<div class="toc">\n  <div class="toc-title">In this month&#39;s episode</div>\n  ' + '\n  '.join(toc_items) + '\n</div>')
+
     # Remaining blocks
+    toc_feat_num = 0
     current_heading = None
     while i < len(blocks):
         block = blocks[i]
@@ -172,28 +189,35 @@ def render_episode(meta, blocks):
                     feat_num += 1
 
             heading_html = heading_text
+            section_id = ""
             if feat_num > 0 and heading_text not in ("The Thumb Incident", "The Final Architecture", "The Rating"):
-                heading_html = f'<span class="feat-num">{feat_num:02d}</span> {heading_text}'
+                toc_feat_num += 1
+                section_id = f' id="section-{toc_feat_num}"'
+                tag_html = ""
+                if section_meta and section_meta.get("tag"):
+                    tag_html = f' <span class="feat-tag">{section_meta["tag"]}</span>'
+                heading_html = f'<span class="feat-num">{feat_num:02d}</span> {heading_text}{tag_html}'
 
             # Add data-start for PiP scroll-seek
             start_attr = ""
             if youtube_id and section_meta and section_meta.get("timestamp"):
                 start_attr = f' data-start="{timestamp_to_seconds(section_meta["timestamp"])}"'
-            body_parts.append(f'<div class="section"{start_attr}>')
+            body_parts.append(f'<div class="section"{start_attr}{section_id}>')
             body_parts.append(f'  <h2>{heading_html}</h2>')
 
-            # Release notes
+            # Release notes - stored for inclusion inside machine block
+            release_notes_html = ""
             if section_meta and section_meta.get("docs"):
-                links = "\n    ".join(
+                links = "\n      ".join(
                     f'<a href="{d["url"]}" target="_blank">{d["label"]}</a>'
                     for d in section_meta["docs"]
                 )
-                body_parts.append(f'''  <div class="release-notes">
-    <div class="rn-label">Read the docs</div>
-    <div class="rn-links">
-    {links}
-    </div>
-  </div>''')
+                release_notes_html = f'''\n    <div class="release-notes-inner">
+      <div class="rn-label">📄 Read the docs</div>
+      <div class="rn-links">
+      {links}
+      </div>
+    </div>'''
 
             # Video — only show inline placeholders when no youtube_id (PiP handles it otherwise)
             if not youtube_id and section_meta and section_meta.get("timestamp"):
@@ -211,7 +235,8 @@ def render_episode(meta, blocks):
             if block.get("is_code"):
                 body_parts.append(f'  <div class="architecture">\n    {block["html"]}\n  </div>')
             else:
-                body_parts.append(f'  <div class="machine">\n    {block["html"]}\n  </div>')
+                body_parts.append(f'  <div class="machine">\n    {block["html"]}{release_notes_html}\n  </div>')
+                release_notes_html = ""  # only attach to first machine block per section
             i += 1
             continue
 
@@ -258,7 +283,14 @@ TEMPLATE = """<!DOCTYPE html>
   .info-callout {{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1.15rem; margin-bottom: 2.5rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.65; }}
   .info-callout strong {{ color: var(--text); font-weight: 600; }}
   .intro p + p {{ margin-top: 1rem; }}
+  .toc {{ margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }}
+  .toc-title {{ font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }}
+  .toc a {{ display: block; font-size: 0.88rem; color: var(--text); text-decoration: none; padding: 0.25rem 0; transition: color 0.15s; }}
+  .toc a:hover {{ color: var(--accent); }}
+  .toc .toc-num {{ color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 500; margin-right: 0.35rem; }}
+  .toc .toc-tag {{ font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); padding: 0.1em 0.45em; border-radius: 3px; margin-left: 0.4rem; vertical-align: 1px; }}
   .section {{ margin-bottom: 3rem; }}
+  .feat-tag {{ font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; color: var(--surface); background: var(--accent); padding: 0.15em 0.5em; border-radius: 3px; margin-left: 0.5rem; vertical-align: 2px; }}
   .section h2 {{ font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 1rem; }}
   .section h2 .feat-num {{ color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 500; margin-right: 0.4rem; }}
   .release-notes {{ margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }}
@@ -274,19 +306,65 @@ TEMPLATE = """<!DOCTYPE html>
   .machine {{ position: relative; background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; font-size: 0.9rem; color: var(--machine-text); line-height: 1.7; }}
   .machine::before {{ content: 'CLAUDE OPUS 4.6'; position: absolute; top: -0.65rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; color: var(--accent); background: var(--bg); border: 1px solid var(--machine-border); padding: 0.15rem 0.6rem; border-radius: 99px; }}
   .machine p + p {{ margin-top: 0.75rem; }}
-  .machine strong {{ color: #0B2026; font-weight: 500; }}
+  .release-notes-inner {{ margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--machine-border); }}
+  .release-notes-inner .rn-label {{ font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }}
+  .release-notes-inner .rn-label {{ font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }}
+  .release-notes-inner .rn-links {{ display: flex; flex-wrap: wrap; gap: 0.4rem; }}
+  .release-notes-inner a {{ font-size: 0.78rem; font-weight: 500; color: var(--accent-blue); text-decoration: none; padding: 0.15em 0.5em; background: rgba(68, 98, 201, 0.08); border-radius: 3px; transition: background 0.15s; }}
+  .release-notes-inner a:hover {{ background: rgba(68, 98, 201, 0.16); text-decoration: underline; }}
+  .release-notes-inner a::after {{ content: " ↗"; font-size: 0.65em; }}
+  .machine strong {{ color: #0B2026; font-weight: 700; font-size: 0.92rem; }}
   .machine code {{ font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; background: rgba(0,0,0,0.04); padding: 0.15em 0.4em; border-radius: 3px; }}
   .human {{ font-size: 1.05rem; color: var(--human-text); line-height: 1.8; padding: 0 0.25rem; }}
-  .human::before {{ content: 'Nick \\2014'; display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; }}
+  .human::before {{ content: "Director\'s Commentary (Nick)"; display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; }}
   .human strong {{ font-weight: 600; }}
   .architecture {{ background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.5rem; position: relative; }}
   .architecture::before {{ content: 'CLAUDE OPUS 4.6'; position: absolute; top: -0.65rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; color: var(--accent); background: var(--bg); border: 1px solid var(--machine-border); padding: 0.15rem 0.6rem; border-radius: 99px; }}
   .architecture pre {{ font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--machine-text); line-height: 1.8; overflow-x: auto; white-space: pre; }}
   .architecture pre .arrow {{ color: var(--accent); }}
   hr.divider {{ border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }}
+  .ep-nav {{ display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); font-size: 0.85rem; }}
+  .ep-nav a {{ color: var(--text-muted); text-decoration: none; transition: color 0.15s; }}
+  .ep-nav a:hover {{ color: var(--accent); }}
+  .ep-nav .ep-nav-label {{ font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.15rem; }}
   footer {{ margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 0.85rem; }}
   footer a {{ color: var(--accent); text-decoration: none; }}
   footer a:hover {{ text-decoration: underline; }}
+
+  /* Sidebar video layout (wide screens) */
+  .layout {{ display: flex; justify-content: center; gap: 3rem; max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }}
+  .layout .container {{ padding-left: 0; padding-right: 0; margin: 0; flex: 1; min-width: 0; }}
+  
+  .video-sidebar {{ width: 520px; flex-shrink: 0; }}
+  .video-sidebar .video-sticky {{ position: sticky; top: calc(50vh - 150px); width: 100%; }}
+  .video-sidebar .video-frame {{ position: relative; width: 100%; padding-bottom: 56.25%; background: #000; border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; }}
+  .video-sidebar .video-frame iframe {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }}
+  .video-sidebar .video-bar {{ display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.6rem; background: var(--text); border-radius: 0 0 var(--radius) var(--radius); }}
+  .video-sidebar .vs-section {{ font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #fff; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 0.5rem; }}
+  .video-sidebar .vs-controls {{ display: flex; gap: 0.35rem; flex-shrink: 0; }}
+  .video-sidebar .vs-btn {{ background: none; border: none; color: #fff; opacity: 0.6; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; line-height: 1; transition: opacity 0.15s; }}
+  .video-sidebar .vs-btn:hover {{ opacity: 1; }}
+
+  @media (max-width: 1100px) {{
+    .layout {{ display: block; padding: 0; }}
+    .layout .container {{ padding: 3rem 1.5rem 6rem; max-width: 720px; margin: 0 auto; }}
+    .video-sidebar {{ display: none; }}
+  }}
+  @media (min-width: 1101px) {{
+    .pip:not(.detached) {{ display: none !important; }}
+    .pip-toggle:not(.detached) {{ display: none !important; }}
+  }}
+
+  @keyframes pip-shake {{
+    0%, 100% {{ transform: translateX(0); }}
+    15% {{ transform: translateX(-6px) rotate(-2deg); }}
+    30% {{ transform: translateX(5px) rotate(1.5deg); }}
+    45% {{ transform: translateX(-4px) rotate(-1deg); }}
+    60% {{ transform: translateX(3px) rotate(0.5deg); }}
+    75% {{ transform: translateX(-2px); }}
+  }}
+  .pip.shake {{ animation: pip-shake 0.5s ease; }}
+  .video-sticky.shake {{ animation: pip-shake 0.5s ease; }}
 
   /* PiP Video Player */
   .pip {{ position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: 360px; min-width: 260px; max-width: 640px; background: #000; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.25); transition: opacity 0.3s, transform 0.3s; }}
@@ -317,21 +395,31 @@ TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
+<div class="layout">
 <div class="container">
 <header>
-  <h1>{title}</h1>
+  <h1><a href="/" style="color:inherit;text-decoration:none;">{title}</a></h1>
   <div class="subtitle">{subtitle}</div>
 </header>
 
 <div class="info-callout">
-  This blog is an experiment in writing with AI without actually writing <em>with</em> AI. Each section has two voices. The summary in the card is <strong>Claude Opus 4.6</strong> &mdash; fed the raw episode transcript, completely unedited. The response underneath is <strong>Nick</strong> &mdash; also completely unedited, just reacting in real time. The video in the corner follows your scroll, jumping to the relevant part of the episode as you read. You can drag it, toss it, resize it, or minimize it.
+  <strong>Welcome to OverArchitected with Nick &amp; Holly &mdash; web edition!</strong>
+  <br><br>
+  Every month we pick our favorite Databricks features and try to shoehorn them into one architecture. This page recaps each feature we covered &mdash; with the <a href="#" id="pip-shake-trigger" style="color:var(--accent);text-decoration:none;font-weight:600;">episode video &#x2198;</a> queued up to jump between sections as you scroll.
+  <br><br>
+  For the web edition, each feature summary is augmented by <strong>Claude Opus 4.6</strong> from the raw episode transcript, and each one is followed by unfiltered <strong>Director&rsquo;s Commentary</strong>.
 </div>
 
 {body}
 
+{ep_nav}
+
 <footer>
   <p>Hated this podcast? Why not replace us with an RSS feed: <a href="https://docs.databricks.com/aws/en/release-notes/">Databricks Release Notes</a></p>
 </footer>
+</div>
+
+{video_sidebar}
 </div>
 
 {pip_block}
@@ -348,6 +436,7 @@ PIP_BLOCK = """<!-- PiP Video Player -->
       <button class="pip-btn" id="pip-mute" title="Unmute">&#128263;</button>
       <button class="pip-btn" id="pip-playpause" title="Play/Pause">&#9654;</button>
       <button class="pip-btn pip-size-toggle" id="pip-size-toggle" title="Toggle size" style="display:none;">&#8596;</button>
+      <button class="pip-btn" id="pip-dock" title="Dock to sidebar" style="display:none;">&#x2926;</button>
       <button class="pip-btn" id="pip-close" title="Minimize">&times;</button>
     </div>
   </div>
@@ -362,8 +451,10 @@ var tag = document.createElement('script');
 tag.src = 'https://www.youtube.com/iframe_api';
 document.head.appendChild(tag);
 
-var PAD = 24; // min distance from any window edge
-var player, isReady = false, currentStart = 0;
+var PAD = 24;
+var player, sidebarPlayer, activePlayer, isReady = false, currentStart = 0;
+var isWide = window.innerWidth > 1100;
+var sidebarMode = isWide;
 var pip = document.getElementById('pip');
 var pipSection = document.getElementById('pip-section');
 var pipPlaypause = document.getElementById('pip-playpause');
@@ -394,55 +485,80 @@ function applyPos(x, y) {{
   pip.style.top = c[1] + 'px';
 }}
 
-function onYouTubeIframeAPIReady() {{
-  player = new YT.Player('pip-player', {{
+var vsSection = document.getElementById('vs-section');
+var vsMute = document.getElementById('vs-mute');
+var vsPlaypause = document.getElementById('vs-playpause');
+var vsDetach = document.getElementById('vs-detach');
+
+function makePlayerOpts(elId) {{
+  return {{
     videoId: '{youtube_id}',
     playerVars: {{ rel: 0, modestbranding: 1, playsinline: 1, autoplay: 1, mute: 1 }},
     events: {{
-      onReady: function() {{
+      onReady: function(event) {{
         isReady = true;
-        pip.classList.remove('hidden');
-        document.body.classList.add('pip-visible');
-        if (isMobile()) {{ pipSizeToggle.style.display = 'inline'; pipResize.style.display = 'none'; }}
-        // Switch to absolute and clamp to respect padding
-        setTimeout(function() {{
-          switchToAbsolute();
-          applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top));
-        }}, 50);
-        player.playVideo();
+        var thisPlayer = event.target;
+        if (sidebarMode && thisPlayer === sidebarPlayer) {{
+          activePlayer = sidebarPlayer;
+          activePlayer.playVideo();
+        }} else if (!sidebarMode && thisPlayer === player) {{
+          activePlayer = player;
+          pip.classList.remove('hidden');
+          document.body.classList.add('pip-visible');
+          if (isMobile()) {{ pipSizeToggle.style.display = 'inline'; pipResize.style.display = 'none'; }}
+    if (pipDock) pipDock.style.display = (window.innerWidth > 1100) ? 'inline' : 'none';
+          setTimeout(function() {{ switchToAbsolute(); applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top)); }}, 50);
+          activePlayer.playVideo();
+        }}
       }},
       onStateChange: function(e) {{
-        pipPlaypause.innerHTML = (e.data === YT.PlayerState.PLAYING) ? '\u23F8' : '\u25B6';
+        var icon = (e.data === YT.PlayerState.PLAYING) ? '\u23F8' : '\u25B6';
+        pipPlaypause.innerHTML = icon;
+        if (vsPlaypause) vsPlaypause.innerHTML = icon;
       }}
     }}
-  }});
+  }};
 }}
 
-pipPlaypause.addEventListener('click', function() {{
-  if (!isReady) return;
-  if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
-  else player.playVideo();
-}});
-
-// Mute/unmute
-pipMute.addEventListener('click', function() {{
-  if (!isReady) return;
-  if (player.isMuted()) {{
-    player.unMute();
-    player.setVolume(80);
-    pipMute.innerHTML = '&#128266;';
-    pipMute.title = 'Mute';
-  }} else {{
-    player.mute();
-    pipMute.innerHTML = '&#128265;';
-    pipMute.title = 'Unmute';
+function onYouTubeIframeAPIReady() {{
+  if (document.getElementById('sidebar-player')) {{
+    sidebarPlayer = new YT.Player('sidebar-player', makePlayerOpts('sidebar-player'));
   }}
-}});
+  if (document.getElementById('pip-player')) {{
+    player = new YT.Player('pip-player', makePlayerOpts('pip-player'));
+  }}
+  activePlayer = sidebarMode ? sidebarPlayer : player;
+}}
+
+function togglePlay() {{
+  if (!isReady || !activePlayer) return;
+  if (activePlayer.getPlayerState() === YT.PlayerState.PLAYING) activePlayer.pauseVideo();
+  else activePlayer.playVideo();
+}}
+pipPlaypause.addEventListener('click', togglePlay);
+if (vsPlaypause) vsPlaypause.addEventListener('click', togglePlay);
+
+function toggleMute() {{
+  if (!isReady || !activePlayer) return;
+  if (activePlayer.isMuted()) {{
+    activePlayer.unMute();
+    activePlayer.setVolume(80);
+    pipMute.innerHTML = '&#128266;';
+    if (vsMute) vsMute.innerHTML = '&#128266;';
+  }} else {{
+    activePlayer.mute();
+    pipMute.innerHTML = '&#128265;';
+    if (vsMute) vsMute.innerHTML = '&#128265;';
+  }}
+}}
+pipMute.addEventListener('click', toggleMute);
+if (vsMute) vsMute.addEventListener('click', toggleMute);
 
 pipClose.addEventListener('click', function() {{
   pip.classList.add('hidden');
   document.body.classList.remove('pip-visible');
   pipReopen.style.display = 'block';
+  if (isReady && activePlayer) activePlayer.pauseVideo();
 }});
 
 pipReopen.addEventListener('click', function() {{
@@ -686,17 +802,157 @@ document.addEventListener('mouseup', function() {{
   }}
 }});
 
+// --- Handle breakpoint crossing ---
+var lastWasWide = isWide;
+function checkBreakpoint() {{
+  var nowWide = window.innerWidth > 1100;
+  if (nowWide === lastWasWide) return;
+  lastWasWide = nowWide;
+  if (nowWide && !sidebarMode) return; // was detached, stay in PiP
+  if (!nowWide) {{
+    // Went narrow — activate PiP
+    pip.classList.remove('hidden');
+    document.body.classList.add('pip-visible');
+    if (isMobile()) {{ pipSizeToggle.style.display = 'inline'; pipResize.style.display = 'none'; }}
+    if (pipDock) pipDock.style.display = (window.innerWidth > 1100) ? 'inline' : 'none';
+    // Sync time from sidebar
+    if (player && sidebarPlayer && sidebarPlayer.getCurrentTime) {{
+      var t = sidebarPlayer.getCurrentTime();
+      var wasMuted = sidebarPlayer.isMuted();
+      sidebarPlayer.pauseVideo();
+      player.seekTo(t, true);
+      player.playVideo();
+      if (!wasMuted) {{ player.unMute(); player.setVolume(80); }}
+    }}
+    activePlayer = player;
+    setTimeout(function() {{ switchToAbsolute(); applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top)); }}, 50);
+  }} else {{
+    // Went wide — activate sidebar
+    pip.classList.add('hidden');
+    document.body.classList.remove('pip-visible');
+    if (sidebarPlayer) {{
+      if (player && player.getCurrentTime) {{
+        var t = player.getCurrentTime();
+        sidebarPlayer.seekTo(t, true);
+        sidebarPlayer.playVideo();
+        if (player && !player.isMuted()) {{ sidebarPlayer.unMute(); sidebarPlayer.setVolume(80); }}
+      }}
+      activePlayer = sidebarPlayer;
+      sidebarMode = true;
+    }}
+  }}
+}}
+
 // --- Keep pip in viewport on window resize ---
 window.addEventListener('resize', function() {{
+  checkBreakpoint();
   if (pip.classList.contains('hidden') || pip.style.right !== 'auto') return;
   // Mobile size toggle visibility
   if (isMobile()) {{ pipSizeToggle.style.display = 'inline'; pipResize.style.display = 'none'; }}
+    if (pipDock) pipDock.style.display = (window.innerWidth > 1100) ? 'inline' : 'none';
   else {{ pipSizeToggle.style.display = 'none'; pipResize.style.display = ''; }}
   var w = pip.offsetWidth;
   var maxW = window.innerWidth - PAD * 2;
   if (w > maxW) {{ w = Math.max(160, maxW); pip.style.width = w + 'px'; }}
   var rect = pip.getBoundingClientRect();
   applyPos(rect.left, rect.top);
+}});
+
+// --- Dock: PiP -> sidebar ---
+var pipDock = document.getElementById('pip-dock');
+if (pipDock) {{
+  // Show dock button only on wide screens
+  if (isWide) pipDock.style.display = 'inline';
+  pipDock.addEventListener('click', function() {{
+    if (!sidebarPlayer) return;
+    // Sync time to sidebar
+    var t = player ? player.getCurrentTime() : 0;
+    var wasMuted = player ? player.isMuted() : true;
+    if (player) player.pauseVideo();
+    
+    sidebarPlayer.seekTo(t, true);
+    sidebarPlayer.playVideo();
+    if (!wasMuted) {{ sidebarPlayer.unMute(); sidebarPlayer.setVolume(80); }}
+    
+    activePlayer = sidebarPlayer;
+    sidebarMode = true;
+    
+    // Hide PiP, show sidebar
+    pip.classList.add('hidden');
+    pip.classList.remove('detached');
+    document.body.classList.remove('pip-visible');
+    var sb = document.querySelector('.video-sidebar');
+    if (sb) sb.style.display = '';
+  }});
+}}
+
+// --- Detach: sidebar -> PiP ---
+if (vsDetach) vsDetach.addEventListener('click', function() {{
+  sidebarMode = false;
+  // Create PiP player if it doesn't exist
+  if (!player) {{
+    player = new YT.Player('pip-player', makePlayerOpts('pip-player'));
+  }}
+  // Sync time
+  var t = sidebarPlayer ? sidebarPlayer.getCurrentTime() : 0;
+  var wasMuted = sidebarPlayer ? sidebarPlayer.isMuted() : true;
+  if (sidebarPlayer) sidebarPlayer.pauseVideo();
+
+  // Show PiP
+  pip.classList.add('detached');
+  pip.classList.remove('hidden');
+  document.body.classList.add('pip-visible');
+  setTimeout(function() {{
+    switchToAbsolute();
+    applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top));
+    if (player && player.seekTo) {{
+      player.seekTo(t, true);
+      player.playVideo();
+      if (!wasMuted) {{ player.unMute(); player.setVolume(80); }}
+    }}
+    activePlayer = player;
+  }}, 500);
+
+  // Hide sidebar
+  var sb = document.querySelector('.video-sidebar');
+  if (sb) sb.style.display = 'none';
+}});
+
+// --- Smooth scroll ToC to center sections ---
+document.querySelectorAll('.toc a[href^="#"]').forEach(function(link) {{
+  link.addEventListener('click', function(e) {{
+    e.preventDefault();
+    var target = document.querySelector(this.getAttribute('href'));
+    if (!target) return;
+    var rect = target.getBoundingClientRect();
+    var offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
+    window.scrollTo({{ top: Math.max(0, offset), behavior: 'smooth' }});
+  }});
+}});
+
+// --- Shake the PiP to draw attention ---
+document.addEventListener('click', function(e) {{
+  var link = e.target.closest('#pip-shake-trigger');
+  if (link) {{
+    e.preventDefault();
+    var target;
+    if (sidebarMode) {{
+      target = document.querySelector('.video-sticky');
+    }} else {{
+      target = pip;
+      if (pip.classList.contains('hidden')) {{
+        pip.classList.remove('hidden');
+        document.body.classList.add('pip-visible');
+        pipReopen.style.display = 'none';
+      }}
+    }}
+    if (target) {{
+      target.classList.remove('shake');
+      void target.offsetWidth;
+      target.classList.add('shake');
+      setTimeout(function() {{ target.classList.remove('shake'); }}, 600);
+    }}
+  }}
 }});
 
 // --- Scroll-seek ---
@@ -708,8 +964,10 @@ var observer = new IntersectionObserver(function(entries) {{
       var heading = entry.target.querySelector('h2');
       if (heading && isReady && start !== currentStart) {{
         currentStart = start;
-        player.seekTo(start, true);
-        pipSection.textContent = heading.textContent.replace(/^\d{{2}}\s*/, '');
+        if (activePlayer) activePlayer.seekTo(start, true);
+        var stext = heading.textContent.replace(/^\d{{2}}\s*/, '');
+        pipSection.textContent = stext;
+        if (vsSection) vsSection.textContent = stext;
       }}
     }}
   }});
@@ -717,6 +975,24 @@ var observer = new IntersectionObserver(function(entries) {{
 
 sections.forEach(function(s) {{ observer.observe(s); }});
 </script>"""
+
+
+VIDEO_SIDEBAR = """<div class="video-sidebar">
+  <div class="video-sticky">
+    <div class="video-frame">
+      <div id="sidebar-player"></div>
+    </div>
+    <div class="video-bar">
+      <span class="vs-section" id="vs-section">Loading...</span>
+      <div class="vs-controls">
+        <button class="vs-btn" id="vs-mute" title="Unmute">&#128263;</button>
+        <button class="vs-btn" id="vs-playpause" title="Play/Pause">&#9654;</button>
+        <button class="vs-btn" id="vs-detach" title="Detach to PiP">&#x2922;</button>
+      </div>
+    </div>
+  </div>
+</div>"""
+
 
 
 INDEX_TEMPLATE = """<!DOCTYPE html>
@@ -739,6 +1015,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
+<div class="layout">
 <div class="container">
   <h1>OverArchitected</h1>
   <div class="tagline">New Databricks features, shoehorned into one architecture to see if it's actually realistic.</div>
@@ -770,11 +1047,20 @@ def build():
         if youtube_id:
             pip_block = PIP_BLOCK.format(youtube_id=youtube_id)
 
+        # Episode navigation — will be filled in second pass
+        ep_nav_html = "<!-- EP_NAV_PLACEHOLDER -->"
+
+        video_sidebar = ""
+        if youtube_id:
+            video_sidebar = VIDEO_SIDEBAR
+
         page_html = TEMPLATE.format(
             title=meta.get("title", "OverArchitected"),
             subtitle=meta.get("subtitle", ""),
             body=body_html,
             pip_block=pip_block,
+            ep_nav=ep_nav_html,
+            video_sidebar=video_sidebar,
         )
 
         out_dir = DIST_DIR / slug
@@ -787,6 +1073,24 @@ def build():
             "title": meta.get("title", slug),
             "date": str(meta.get("date", "")),
         })
+
+    # Second pass: generate prev/next navigation
+    for idx, entry in enumerate(index_entries):
+        slug = entry["slug"]
+        prev_link = ""
+        next_link = ""
+        if idx > 0:
+            p = index_entries[idx - 1]
+            prev_link = f'<a href="/{p["slug"]}/"><span class="ep-nav-label">&larr; Previous</span>{p["title"]}</a>'
+        if idx < len(index_entries) - 1:
+            n = index_entries[idx + 1]
+            next_link = f'<a href="/{n["slug"]}/"><span class="ep-nav-label">Next &rarr;</span>{n["title"]}</a>'
+        if prev_link or next_link:
+            nav_html = f'<div class="ep-nav">{prev_link or "<span></span>"}{next_link or "<span></span>"}</div>'
+            out_path = DIST_DIR / slug / "index.html"
+            html = out_path.read_text()
+            html = html.replace("<!-- EP_NAV_PLACEHOLDER -->", nav_html)
+            out_path.write_text(html)
 
     # Build index
     episodes_html = "\n  ".join(
