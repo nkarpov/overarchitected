@@ -2,7 +2,7 @@
 
 Companion blog for the [OverArchitected](https://www.youtube.com/playlist?list=PLTPXxbhUt-YVmQhBv7kb12GBAhepCpAWu) podcast with Nick Karpov and Holly Smith — where we talk about new Databricks features and shoehorn them into one architecture to see if it's actually realistic.
 
-**Live site:** [nickkarpov.com/overarchitected](https://www.nickkarpov.com/overarchitected/)
+**Live site:** [overarchitected.com](https://overarchitected.com)
 
 ## How the blog works
 
@@ -112,7 +112,7 @@ git commit -m "Add YYYY-MM episode"
 git push
 ```
 
-The GitHub Action builds and deploys to GitHub Pages automatically. The site is live at `nickkarpov.com/overarchitected/` within a couple minutes.
+The GitHub Action builds and deploys to GitHub Pages automatically. The site is live at `overarchitected.com/` within a couple minutes.
 
 ## Workflow for writing an episode
 

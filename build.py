@@ -793,6 +793,10 @@ def build():
     index_html = INDEX_TEMPLATE.format(episodes=episodes_html)
     (DIST_DIR / "index.html").write_text(index_html)
     print("  Built index.html")
+
+    # CNAME for custom domain
+    (DIST_DIR / "CNAME").write_text("overarchitected.com")
+    print("  Built CNAME")
     print(f"Done. {len(index_entries)} episode(s) in dist/")
 
 
