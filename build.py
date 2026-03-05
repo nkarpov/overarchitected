@@ -292,7 +292,7 @@ TEMPLATE = """<!DOCTYPE html>
   .pip.hidden {{ opacity: 0; transform: translateY(1rem); pointer-events: none; }}
   .pip-header {{ display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: var(--text); cursor: grab; }}
   .pip-header:active {{ cursor: grabbing; }}
-  .pip-resize {{ position: absolute; top: 0; left: 0; width: 20px; height: 20px; cursor: nw-resize; z-index: 2; }}
+  .pip-resize {{ position: absolute; top: 0; left: 0; width: 20px; height: 20px; cursor: nw-resize; z-index: 4; }}
   .pip-resize::after {{ content: ''; position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; border-top: 2px solid rgba(255,255,255,0.25); border-left: 2px solid rgba(255,255,255,0.25); }}
   .pip-section {{ font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #fff; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 0.5rem; }}
   .pip-controls {{ display: flex; gap: 0.35rem; flex-shrink: 0; }}
