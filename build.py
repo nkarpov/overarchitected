@@ -289,7 +289,7 @@ TEMPLATE = """<!DOCTYPE html>
   .intro p + p {{ margin-top: 1rem; }}
   .toc {{ margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }}
   .toc-title {{ font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }}
-  .toc a {{ display: block; font-size: 0.88rem; color: var(--text); text-decoration: none; padding: 0.25rem 0; transition: color 0.15s; }}
+  .toc a {{ display: block; font-size: 0.88rem; color: var(--text); text-decoration: none; padding: 0.25rem 0; transition: color 0.15s; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(to right, black 80%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%); }}
   .toc a:hover {{ color: var(--accent); }}
   .toc .toc-num {{ color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 500; margin-right: 0.35rem; }}
   .toc .toc-tag {{ font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); padding: 0.1em 0.45em; border-radius: 3px; margin-left: 0.4rem; vertical-align: 1px; }}
@@ -934,7 +934,12 @@ document.querySelectorAll('.toc a[href^="#"]').forEach(function(link) {{
     var target = document.querySelector(this.getAttribute('href'));
     if (!target) return;
     var rect = target.getBoundingClientRect();
-    var offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
+    var offset;
+    if (window.innerWidth < 1100) {{
+      offset = window.pageYOffset + rect.top - 80;
+    }} else {{
+      offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
+    }}
     window.scrollTo({{ top: Math.max(0, offset), behavior: 'smooth' }});
   }});
 }});
