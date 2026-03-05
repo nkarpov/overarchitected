@@ -2,7 +2,7 @@
 title: "OverArchitected: March 2026"
 date: 2026-03-04
 subtitle: "Nick Karpov & Holly Smith"
-youtube_id: null
+youtube_id: "vzu06KGTOrQ"
 sections:
   - heading: "The Thumb Incident"
     timestamp: "0:00"

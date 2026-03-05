@@ -175,7 +175,11 @@ def render_episode(meta, blocks):
             if feat_num > 0 and heading_text not in ("The Thumb Incident", "The Final Architecture", "The Rating"):
                 heading_html = f'<span class="feat-num">{feat_num:02d}</span> {heading_text}'
 
-            body_parts.append(f'<div class="section">')
+            # Add data-start for PiP scroll-seek
+            start_attr = ""
+            if youtube_id and section_meta and section_meta.get("timestamp"):
+                start_attr = f' data-start="{timestamp_to_seconds(section_meta["timestamp"])}"'
+            body_parts.append(f'<div class="section"{start_attr}>')
             body_parts.append(f'  <h2>{heading_html}</h2>')
 
             # Release notes
@@ -191,16 +195,11 @@ def render_episode(meta, blocks):
     </div>
   </div>''')
 
-            # Video
-            if section_meta and section_meta.get("timestamp"):
+            # Video — only show inline placeholders when no youtube_id (PiP handles it otherwise)
+            if not youtube_id and section_meta and section_meta.get("timestamp"):
                 ts = section_meta["timestamp"]
                 secs = timestamp_to_seconds(ts)
-                if youtube_id:
-                    body_parts.append(f'''  <div class="video-wrap">
-    <iframe src="https://www.youtube.com/embed/{youtube_id}?start={secs}&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-  </div>''')
-                else:
-                    body_parts.append(f'''  <div class="video-wrap placeholder" data-start="{secs}">
+                body_parts.append(f'''  <div class="video-wrap placeholder" data-start="{secs}">
     <span>&#9654; Watch from <span class="timestamp">{ts}</span></span>
   </div>''')
 
@@ -231,6 +230,7 @@ def render_episode(meta, blocks):
     return body
 
 
+
 TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -244,8 +244,7 @@ TEMPLATE = """<!DOCTYPE html>
     --bg: #F9F7F4; --surface: #fff; --border: #e0ddd8;
     --text: #0B2026; --text-muted: #5a6670;
     --accent: #EB1600; --accent-dim: rgba(235, 22, 0, 0.06);
-    --accent-cyan: #40d1f5;
-    --accent-blue: #4462c9;
+    --accent-cyan: #40d1f5; --accent-blue: #4462c9;
     --machine-bg: #eef1f8; --machine-border: #d4dbe8; --machine-text: #4a5568;
     --human-text: #0B2026;
     --radius: 4px;
@@ -267,9 +266,7 @@ TEMPLATE = """<!DOCTYPE html>
   .release-notes a {{ font-size: 0.82rem; font-weight: 500; color: var(--accent-blue); text-decoration: none; padding: 0.2em 0.6em; background: var(--accent-dim); border-radius: 4px; transition: background 0.15s; }}
   .release-notes a:hover {{ background: rgba(68, 98, 201, 0.14); text-decoration: underline; }}
   .release-notes a::after {{ content: ' \\2197'; font-size: 0.7em; }}
-  .video-wrap {{ position: relative; width: 100%; padding-bottom: 56.25%; margin-bottom: 1.25rem; border-radius: var(--radius); overflow: hidden; background: #000; }}
-  .video-wrap iframe {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }}
-  .video-wrap.placeholder {{ padding-bottom: 0; height: 56px; background: var(--surface); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; }}
+  .video-wrap.placeholder {{ height: 56px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; }}
   .video-wrap.placeholder span {{ font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-muted); }}
   .video-wrap.placeholder .timestamp {{ color: var(--accent); font-weight: 500; }}
   .machine {{ position: relative; background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; font-size: 0.9rem; color: var(--machine-text); line-height: 1.7; }}
@@ -288,12 +285,29 @@ TEMPLATE = """<!DOCTYPE html>
   footer {{ margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 0.85rem; }}
   footer a {{ color: var(--accent); text-decoration: none; }}
   footer a:hover {{ text-decoration: underline; }}
+
+  /* PiP Video Player */
+  .pip {{ position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: 360px; background: #000; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.25); transition: opacity 0.3s, transform 0.3s; }}
+  .pip.hidden {{ opacity: 0; transform: translateY(1rem); pointer-events: none; }}
+  .pip-header {{ display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: var(--text); }}
+  .pip-section {{ font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #fff; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 0.5rem; }}
+  .pip-controls {{ display: flex; gap: 0.35rem; flex-shrink: 0; }}
+  .pip-btn {{ background: none; border: none; color: #fff; opacity: 0.6; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; line-height: 1; transition: opacity 0.15s; }}
+  .pip-btn:hover {{ opacity: 1; }}
+  .pip-video {{ position: relative; width: 100%; padding-bottom: 56.25%; }}
+  .pip-video iframe {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }}
+  .pip-toggle {{ position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 1.2rem; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: none; transition: transform 0.15s; }}
+  .pip-toggle:hover {{ transform: scale(1.1); }}
+
   @media (max-width: 600px) {{
     .container {{ padding: 2rem 1rem 4rem; }}
     header h1 {{ font-size: 1.5rem; }}
     .machine {{ padding: 1rem 1.15rem; }}
     .human {{ font-size: 1rem; }}
     .architecture pre {{ font-size: 0.7rem; }}
+    .pip {{ bottom: 0; right: 0; left: 0; width: 100%; border-radius: 0; }}
+    .pip-toggle {{ bottom: 0.75rem; right: 0.75rem; width: 40px; height: 40px; font-size: 1rem; }}
+    body.pip-visible {{ padding-bottom: 56vw; }}
   }}
 </style>
 </head>
@@ -310,8 +324,104 @@ TEMPLATE = """<!DOCTYPE html>
   <p>Hated this podcast? Why not replace us with an RSS feed: <a href="https://docs.databricks.com/aws/en/release-notes/">Databricks Release Notes</a></p>
 </footer>
 </div>
+
+{pip_block}
 </body>
 </html>"""
+
+
+PIP_BLOCK = """<!-- PiP Video Player -->
+<div class="pip hidden" id="pip">
+  <div class="pip-header">
+    <span class="pip-section" id="pip-section">Loading...</span>
+    <div class="pip-controls">
+      <button class="pip-btn" id="pip-playpause" title="Play/Pause">&#9654;</button>
+      <button class="pip-btn" id="pip-close" title="Minimize">&times;</button>
+    </div>
+  </div>
+  <div class="pip-video">
+    <div id="pip-player"></div>
+  </div>
+</div>
+<button class="pip-toggle" id="pip-reopen" title="Show video">&#9654;</button>
+
+<script>
+// YouTube IFrame API
+var tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
+
+var player, isReady = false, isPipVisible = true, currentStart = 0;
+var pip = document.getElementById('pip');
+var pipSection = document.getElementById('pip-section');
+var pipPlaypause = document.getElementById('pip-playpause');
+var pipClose = document.getElementById('pip-close');
+var pipReopen = document.getElementById('pip-reopen');
+
+function onYouTubeIframeAPIReady() {{
+  player = new YT.Player('pip-player', {{
+    videoId: '{youtube_id}',
+    playerVars: {{ rel: 0, modestbranding: 1, playsinline: 1 }},
+    events: {{
+      onReady: function() {{
+        isReady = true;
+        pip.classList.remove('hidden');
+        document.body.classList.add('pip-visible');
+      }},
+      onStateChange: function(e) {{
+        pipPlaypause.innerHTML = (e.data === YT.PlayerState.PLAYING) ? '&#10074;&#10074;' : '&#9654;';
+      }}
+    }}
+  }});
+}}
+
+// Play/pause
+pipPlaypause.addEventListener('click', function() {{
+  if (!isReady) return;
+  var state = player.getPlayerState();
+  if (state === YT.PlayerState.PLAYING) {{ player.pauseVideo(); }}
+  else {{ player.playVideo(); }}
+}});
+
+// Close/minimize
+pipClose.addEventListener('click', function() {{
+  pip.classList.add('hidden');
+  document.body.classList.remove('pip-visible');
+  pipReopen.style.display = 'block';
+  isPipVisible = false;
+}});
+
+// Reopen
+pipReopen.addEventListener('click', function() {{
+  pip.classList.remove('hidden');
+  document.body.classList.add('pip-visible');
+  pipReopen.style.display = 'none';
+  isPipVisible = true;
+}});
+
+// Scroll-seek: IntersectionObserver on sections with data-start
+var sections = document.querySelectorAll('.section[data-start]');
+var observer = new IntersectionObserver(function(entries) {{
+  entries.forEach(function(entry) {{
+    if (entry.isIntersecting) {{
+      var start = parseInt(entry.target.dataset.start);
+      var heading = entry.target.querySelector('h2');
+      if (heading && isReady && start !== currentStart) {{
+        currentStart = start;
+        player.seekTo(start, true);
+        // Update section label
+        var text = heading.textContent.replace(/^\\d{{2}}\\s*/, '');
+        pipSection.textContent = text;
+      }}
+    }}
+  }});
+}}, {{
+  rootMargin: '-20% 0px -60% 0px',
+  threshold: 0
+}});
+
+sections.forEach(function(s) {{ observer.observe(s); }});
+</script>"""
 
 
 INDEX_TEMPLATE = """<!DOCTYPE html>
@@ -326,8 +436,8 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   body {{ font-family: 'DM Sans', Arial, sans-serif; background: #F9F7F4; color: #0B2026; line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
   h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem; }}
-  .tagline {{ color: #5a6670; font-size: 0.95rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #e5e5e5; }}
-  .episode {{ display: block; padding: 1.25rem 1.5rem; margin-bottom: 1rem; background: #fff; border: 1px solid #e5e5e5; border-radius: var(--radius); text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }}
+  .tagline {{ color: #5a6670; font-size: 0.95rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #e0ddd8; }}
+  .episode {{ display: block; padding: 1.25rem 1.5rem; margin-bottom: 1rem; background: #fff; border: 1px solid #e0ddd8; border-radius: 4px; text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }}
   .episode:hover {{ border-color: #EB1600; box-shadow: 0 2px 8px rgba(235, 22, 0, 0.1); }}
   .episode .ep-title {{ font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }}
   .episode .ep-date {{ font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #EB1600; }}
@@ -354,16 +464,22 @@ def build():
         if not md_file.exists():
             continue
 
-        slug = ep_dir.name  # e.g. "2026-03"
+        slug = ep_dir.name
         raw = md_file.read_text()
         meta, body_md = parse_frontmatter(raw)
         blocks = parse_body(body_md)
         body_html = render_episode(meta, blocks)
 
+        youtube_id = meta.get("youtube_id")
+        pip_block = ""
+        if youtube_id:
+            pip_block = PIP_BLOCK.format(youtube_id=youtube_id)
+
         page_html = TEMPLATE.format(
             title=meta.get("title", "OverArchitected"),
             subtitle=meta.get("subtitle", ""),
             body=body_html,
+            pip_block=pip_block,
         )
 
         out_dir = DIST_DIR / slug
