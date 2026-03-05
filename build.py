@@ -339,6 +339,7 @@ PIP_BLOCK = """<!-- PiP Video Player -->
   <div class="pip-header" id="pip-drag">
     <span class="pip-section" id="pip-section">Loading...</span>
     <div class="pip-controls">
+      <button class="pip-btn" id="pip-mute" title="Unmute">&#128263;</button>
       <button class="pip-btn" id="pip-playpause" title="Play/Pause">&#9654;</button>
       <button class="pip-btn pip-size-toggle" id="pip-size-toggle" title="Toggle size" style="display:none;">&#8596;</button>
       <button class="pip-btn" id="pip-close" title="Minimize">&times;</button>
@@ -360,14 +361,16 @@ var player, isReady = false, currentStart = 0;
 var pip = document.getElementById('pip');
 var pipSection = document.getElementById('pip-section');
 var pipPlaypause = document.getElementById('pip-playpause');
+var pipMute = document.getElementById('pip-mute');
 var pipClose = document.getElementById('pip-close');
 var pipReopen = document.getElementById('pip-reopen');
 var pipDrag = document.getElementById('pip-drag');
 var pipResize = document.getElementById('pip-resize');
 var pipSizeToggle = document.getElementById('pip-size-toggle');
+var DRAG_THRESHOLD = 5; // px movement before it counts as drag vs click
 
 var overlay = document.createElement('div');
-overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;display:none;';
+overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;';
 pip.appendChild(overlay);
 
 function isMobile() {{ return window.innerWidth <= 600; }}
@@ -415,6 +418,21 @@ pipPlaypause.addEventListener('click', function() {{
   else player.playVideo();
 }});
 
+// Mute/unmute
+pipMute.addEventListener('click', function() {{
+  if (!isReady) return;
+  if (player.isMuted()) {{
+    player.unMute();
+    player.setVolume(80);
+    pipMute.innerHTML = '&#128266;';
+    pipMute.title = 'Mute';
+  }} else {{
+    player.mute();
+    pipMute.innerHTML = '&#128265;';
+    pipMute.title = 'Unmute';
+  }}
+}});
+
 pipClose.addEventListener('click', function() {{
   pip.classList.add('hidden');
   document.body.classList.remove('pip-visible');
@@ -454,7 +472,7 @@ var velX = 0, velY = 0, lastMoveX = 0, lastMoveY = 0, lastMoveTime = 0;
 function onDragStart(cx, cy) {{
   isDragging = true;
   pip.classList.add('dragging');
-  overlay.style.display = 'block';
+  // overlay active
   var rect = pip.getBoundingClientRect();
   dragX = cx - rect.left;
   dragY = cy - rect.top;
@@ -485,7 +503,7 @@ function onDragEnd() {{
   if (!isDragging) return;
   isDragging = false;
   pip.classList.remove('dragging');
-  overlay.style.display = 'none';
+  // overlay active
 
   // If velocity is meaningful, start momentum
   var speed = Math.sqrt(velX * velX + velY * velY);
@@ -550,6 +568,65 @@ document.addEventListener('touchmove', function(e) {{
 }});
 document.addEventListener('touchend', onDragEnd);
 
+// --- VIDEO AREA: drag vs click-through ---
+var overlayStartX, overlayStartY, overlayMoved;
+
+overlay.addEventListener('mousedown', function(e) {{
+  overlayStartX = e.clientX;
+  overlayStartY = e.clientY;
+  overlayMoved = false;
+  onDragStart(e.clientX, e.clientY);
+}});
+
+overlay.addEventListener('mousemove', function(e) {{
+  if (!isDragging) return;
+  var dx = e.clientX - overlayStartX;
+  var dy = e.clientY - overlayStartY;
+  if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) overlayMoved = true;
+}});
+
+overlay.addEventListener('mouseup', function(e) {{
+  if (!overlayMoved) {{
+    // It was a click, not a drag — pass through to YouTube
+    onDragEnd();
+    overlay.style.pointerEvents = 'none';
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    if (el) el.click();
+    setTimeout(function() {{ overlay.style.pointerEvents = ''; }}, 100);
+  }}
+}});
+
+overlay.addEventListener('touchstart', function(e) {{
+  var t = e.touches[0];
+  overlayStartX = t.clientX;
+  overlayStartY = t.clientY;
+  overlayMoved = false;
+  if (isMobile()) pip.style.width = pip.getBoundingClientRect().width + 'px';
+  onDragStart(t.clientX, t.clientY);
+}}, {{ passive: false }});
+
+overlay.addEventListener('touchmove', function(e) {{
+  if (!isDragging) return;
+  var t = e.touches[0];
+  var dx = t.clientX - overlayStartX;
+  var dy = t.clientY - overlayStartY;
+  if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) overlayMoved = true;
+  onDragMove(t.clientX, t.clientY);
+}}, {{ passive: true }});
+
+overlay.addEventListener('touchend', function(e) {{
+  if (!overlayMoved) {{
+    // Tap, not drag — pass through
+    onDragEnd();
+    overlay.style.pointerEvents = 'none';
+    var el = document.elementFromPoint(overlayStartX, overlayStartY);
+    if (el) el.click();
+    setTimeout(function() {{ overlay.style.pointerEvents = ''; }}, 300);
+  }} else {{
+    onDragEnd();
+  }}
+}});
+
 // --- RESIZE (desktop only) ---
 var isResizing = false, resStartX, resStartY, resStartW, resStartRect;
 
@@ -559,7 +636,7 @@ pipResize.addEventListener('mousedown', function(e) {{
   e.stopPropagation();
   isResizing = true;
   pip.classList.add('dragging');
-  overlay.style.display = 'block';
+  // overlay active
   switchToAbsolute();
   resStartX = e.clientX;
   resStartY = e.clientY;
@@ -598,7 +675,7 @@ document.addEventListener('mouseup', function() {{
   if (isResizing) {{
     isResizing = false;
     pip.classList.remove('dragging');
-    overlay.style.display = 'none';
+    // overlay active
   }}
 }});
 
