@@ -287,9 +287,13 @@ TEMPLATE = """<!DOCTYPE html>
   footer a:hover {{ text-decoration: underline; }}
 
   /* PiP Video Player */
-  .pip {{ position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: 360px; background: #000; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.25); transition: opacity 0.3s, transform 0.3s; }}
+  .pip {{ position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: 360px; min-width: 260px; max-width: 640px; background: #000; border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.25); transition: opacity 0.3s, transform 0.3s; }}
+  .pip.dragging {{ transition: none; user-select: none; }}
   .pip.hidden {{ opacity: 0; transform: translateY(1rem); pointer-events: none; }}
-  .pip-header {{ display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: var(--text); }}
+  .pip-header {{ display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: var(--text); cursor: grab; }}
+  .pip-header:active {{ cursor: grabbing; }}
+  .pip-resize {{ position: absolute; top: 0; left: 0; width: 20px; height: 20px; cursor: nw-resize; z-index: 2; }}
+  .pip-resize::after {{ content: ''; position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; border-top: 2px solid rgba(255,255,255,0.25); border-left: 2px solid rgba(255,255,255,0.25); }}
   .pip-section {{ font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #fff; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 0.5rem; }}
   .pip-controls {{ display: flex; gap: 0.35rem; flex-shrink: 0; }}
   .pip-btn {{ background: none; border: none; color: #fff; opacity: 0.6; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; line-height: 1; transition: opacity 0.15s; }}
@@ -305,9 +309,8 @@ TEMPLATE = """<!DOCTYPE html>
     .machine {{ padding: 1rem 1.15rem; }}
     .human {{ font-size: 1rem; }}
     .architecture pre {{ font-size: 0.7rem; }}
-    .pip {{ bottom: 0; right: 0; left: 0; width: 100%; border-radius: 0; }}
+    .pip {{ width: 200px; min-width: 160px; max-width: 85vw; }}
     .pip-toggle {{ bottom: 0.75rem; right: 0.75rem; width: 40px; height: 40px; font-size: 1rem; }}
-    body.pip-visible {{ padding-bottom: 56vw; }}
   }}
 </style>
 </head>
@@ -332,7 +335,8 @@ TEMPLATE = """<!DOCTYPE html>
 
 PIP_BLOCK = """<!-- PiP Video Player -->
 <div class="pip hidden" id="pip">
-  <div class="pip-header">
+  <div class="pip-resize" id="pip-resize"></div>
+  <div class="pip-header" id="pip-drag">
     <span class="pip-section" id="pip-section">Loading...</span>
     <div class="pip-controls">
       <button class="pip-btn" id="pip-playpause" title="Play/Pause">&#9654;</button>
@@ -346,60 +350,192 @@ PIP_BLOCK = """<!-- PiP Video Player -->
 <button class="pip-toggle" id="pip-reopen" title="Show video">&#9654;</button>
 
 <script>
-// YouTube IFrame API
 var tag = document.createElement('script');
 tag.src = 'https://www.youtube.com/iframe_api';
 document.head.appendChild(tag);
 
-var player, isReady = false, isPipVisible = true, currentStart = 0;
+var player, isReady = false, currentStart = 0;
 var pip = document.getElementById('pip');
 var pipSection = document.getElementById('pip-section');
 var pipPlaypause = document.getElementById('pip-playpause');
 var pipClose = document.getElementById('pip-close');
 var pipReopen = document.getElementById('pip-reopen');
+var pipDrag = document.getElementById('pip-drag');
+var pipResize = document.getElementById('pip-resize');
+
+// Invisible overlay to capture mouse over iframe during drag/resize
+var overlay = document.createElement('div');
+overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;display:none;';
+pip.appendChild(overlay);
 
 function onYouTubeIframeAPIReady() {{
   player = new YT.Player('pip-player', {{
     videoId: '{youtube_id}',
-    playerVars: {{ rel: 0, modestbranding: 1, playsinline: 1 }},
+    playerVars: {{ rel: 0, modestbranding: 1, playsinline: 1, autoplay: 1, mute: 1 }},
     events: {{
       onReady: function() {{
         isReady = true;
         pip.classList.remove('hidden');
         document.body.classList.add('pip-visible');
+        player.playVideo();
       }},
       onStateChange: function(e) {{
-        pipPlaypause.innerHTML = (e.data === YT.PlayerState.PLAYING) ? '&#10074;&#10074;' : '&#9654;';
+        pipPlaypause.innerHTML = (e.data === YT.PlayerState.PLAYING) ? '\u23F8' : '\u25B6';
       }}
     }}
   }});
 }}
 
-// Play/pause
 pipPlaypause.addEventListener('click', function() {{
   if (!isReady) return;
-  var state = player.getPlayerState();
-  if (state === YT.PlayerState.PLAYING) {{ player.pauseVideo(); }}
-  else {{ player.playVideo(); }}
+  if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
+  else player.playVideo();
 }});
 
-// Close/minimize
 pipClose.addEventListener('click', function() {{
   pip.classList.add('hidden');
   document.body.classList.remove('pip-visible');
   pipReopen.style.display = 'block';
-  isPipVisible = false;
 }});
 
-// Reopen
 pipReopen.addEventListener('click', function() {{
   pip.classList.remove('hidden');
   document.body.classList.add('pip-visible');
   pipReopen.style.display = 'none';
-  isPipVisible = true;
 }});
 
-// Scroll-seek: IntersectionObserver on sections with data-start
+// --- Switch to absolute positioning so we can freely place it ---
+function switchToAbsolute() {{
+  var rect = pip.getBoundingClientRect();
+  pip.style.left = rect.left + 'px';
+  pip.style.top = rect.top + 'px';
+  pip.style.right = 'auto';
+  pip.style.bottom = 'auto';
+}}
+
+// --- DRAG ---
+var isDragging = false, dragX, dragY;
+
+function onDragStart(cx, cy) {{
+  isDragging = true;
+  pip.classList.add('dragging');
+  overlay.style.display = 'block';
+  var rect = pip.getBoundingClientRect();
+  dragX = cx - rect.left;
+  dragY = cy - rect.top;
+  switchToAbsolute();
+}}
+
+function onDragMove(cx, cy) {{
+  if (!isDragging) return;
+  var x = Math.max(0, Math.min(window.innerWidth - pip.offsetWidth, cx - dragX));
+  var y = Math.max(0, Math.min(window.innerHeight - pip.offsetHeight, cy - dragY));
+  pip.style.left = x + 'px';
+  pip.style.top = y + 'px';
+}}
+
+function onDragEnd() {{
+  if (!isDragging) return;
+  isDragging = false;
+  pip.classList.remove('dragging');
+  overlay.style.display = 'none';
+}}
+
+pipDrag.addEventListener('mousedown', function(e) {{
+  if (e.target.closest('.pip-btn')) return;
+  e.preventDefault();
+  onDragStart(e.clientX, e.clientY);
+}});
+document.addEventListener('mousemove', function(e) {{ onDragMove(e.clientX, e.clientY); }});
+document.addEventListener('mouseup', onDragEnd);
+
+pipDrag.addEventListener('touchstart', function(e) {{
+  if (e.target.closest('.pip-btn')) return;
+  e.preventDefault();
+  var t = e.touches[0];
+  pip.style.width = pip.getBoundingClientRect().width + 'px';
+  onDragStart(t.clientX, t.clientY);
+}});
+document.addEventListener('touchmove', function(e) {{
+  if (isDragging) {{ var t = e.touches[0]; onDragMove(t.clientX, t.clientY); }}
+}});
+document.addEventListener('touchend', onDragEnd);
+
+// --- RESIZE ---
+// Grows away from the nearest window edges, anchoring the closest corner.
+var isResizing = false, resStartX, resStartY, resStartW, resStartRect;
+
+pipResize.addEventListener('mousedown', function(e) {{
+  e.preventDefault();
+  e.stopPropagation();
+  isResizing = true;
+  pip.classList.add('dragging');
+  overlay.style.display = 'block';
+  switchToAbsolute();
+  resStartX = e.clientX;
+  resStartY = e.clientY;
+  resStartW = pip.offsetWidth;
+  resStartRect = pip.getBoundingClientRect();
+}});
+
+document.addEventListener('mousemove', function(e) {{
+  if (!isResizing) return;
+  var rect = resStartRect;
+  // Figure out which corner is the anchor (closest to a window edge)
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top + rect.height / 2;
+  var anchorRight = cx > window.innerWidth / 2;
+  var anchorBottom = cy > window.innerHeight / 2;
+
+  // Determine resize direction from mouse delta
+  var dx = e.clientX - resStartX;
+  var dy = e.clientY - resStartY;
+  // Use whichever axis moved more, maintain aspect ratio
+  var delta = Math.abs(dx) > Math.abs(dy) ? dx : dy * (16/9);
+  // If anchored right/bottom, dragging left/up = bigger
+  var sign = (anchorRight || anchorBottom) ? -1 : 1;
+  var newW = Math.max(260, Math.min(640, resStartW + delta * sign));
+
+  pip.style.width = newW + 'px';
+
+  // Reposition: keep the anchor corner fixed
+  if (anchorRight) {{
+    pip.style.left = (rect.right - newW) + 'px';
+  }} else {{
+    pip.style.left = rect.left + 'px';
+  }}
+  if (anchorBottom) {{
+    var newH = newW * 9 / 16 + 30; // 30 for header bar approx
+    pip.style.top = (rect.bottom - newH) + 'px';
+  }} else {{
+    pip.style.top = rect.top + 'px';
+  }}
+}});
+
+document.addEventListener('mouseup', function() {{
+  if (isResizing) {{
+    isResizing = false;
+    pip.classList.remove('dragging');
+    overlay.style.display = 'none';
+  }}
+}});
+
+// --- Keep pip in viewport on window resize ---
+window.addEventListener('resize', function() {{
+  if (pip.classList.contains('hidden') || pip.style.right !== 'auto') return;
+  var rect = pip.getBoundingClientRect();
+  var w = pip.offsetWidth;
+  if (w > window.innerWidth - 16) {{
+    w = Math.max(160, window.innerWidth - 16);
+    pip.style.width = w + 'px';
+  }}
+  var x = Math.max(0, Math.min(window.innerWidth - w, rect.left));
+  var y = Math.max(0, Math.min(window.innerHeight - pip.offsetHeight, rect.top));
+  pip.style.left = x + 'px';
+  pip.style.top = y + 'px';
+}});
+
+// --- Scroll-seek ---
 var sections = document.querySelectorAll('.section[data-start]');
 var observer = new IntersectionObserver(function(entries) {{
   entries.forEach(function(entry) {{
@@ -409,16 +545,11 @@ var observer = new IntersectionObserver(function(entries) {{
       if (heading && isReady && start !== currentStart) {{
         currentStart = start;
         player.seekTo(start, true);
-        // Update section label
-        var text = heading.textContent.replace(/^\\d{{2}}\\s*/, '');
-        pipSection.textContent = text;
+        pipSection.textContent = heading.textContent.replace(/^\d{{2}}\s*/, '');
       }}
     }}
   }});
-}}, {{
-  rootMargin: '-20% 0px -60% 0px',
-  threshold: 0
-}});
+}}, {{ rootMargin: '-20% 0px -60% 0px', threshold: 0 }});
 
 sections.forEach(function(s) {{ observer.observe(s); }});
 </script>"""

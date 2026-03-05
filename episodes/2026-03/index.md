@@ -58,6 +58,8 @@ I've been thinking about how to write with LLMs without... writing *with* LLMs. 
 
 So here's the experiment: I fed the transcript from this month's episode to Claude Opus and let it summarize each section. I didn't edit a single word of its output. Instead, I just respond to it — in my own voice, completely unedited. The machine does the recap, I do the commentary.
 
+Oh and that little video floating in the corner? It follows you as you scroll. Each section jumps to that part of the episode automatically. Drag it around, resize it, toss it wherever you want. I wanted a blog post that feels more like watching the show with someone's notes open next to it. So that's what this is.
+
 ## The Thumb Incident
 
 > Nick sliced off a piece of his thumb cooking, calmly Tupperwared it with ice, and went to the hospital. His wife nearly tossed the container thinking it was leftovers. Doctors couldn't save it.
