@@ -3,6 +3,7 @@
 
 import os
 import re
+import shutil
 import yaml
 import html as html_mod
 from pathlib import Path
@@ -241,7 +242,7 @@ def render_episode(meta, blocks):
             continue
 
         if block["type"] == "human":
-            body_parts.append(f'  <div class="human">\n    {block["html"]}\n  </div>')
+            body_parts.append(f'  <div class="human">\n    <div class="human-label"><img src="/images/nick_LI.jpeg" alt="Nick"> Director\'s Commentary (Nick)</div>\n    {block["html"]}\n  </div>')
             i += 1
             continue
 
@@ -313,10 +314,12 @@ TEMPLATE = """<!DOCTYPE html>
   .release-notes-inner a {{ font-size: 0.78rem; font-weight: 500; color: var(--accent-blue); text-decoration: none; padding: 0.15em 0.5em; background: rgba(68, 98, 201, 0.08); border-radius: 3px; transition: background 0.15s; }}
   .release-notes-inner a:hover {{ background: rgba(68, 98, 201, 0.16); text-decoration: underline; }}
   .release-notes-inner a::after {{ content: " ↗"; font-size: 0.65em; }}
-  .machine strong {{ color: #0B2026; font-weight: 700; font-size: 0.92rem; }}
+  .machine strong {{ color: #2a3a3f; font-weight: 500; font-size: 0.92rem; }}
+  .machine p > strong:first-child {{ color: #0B2026; font-weight: 700; }}
   .machine code {{ font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; background: rgba(0,0,0,0.04); padding: 0.15em 0.4em; border-radius: 3px; }}
   .human {{ font-size: 1.05rem; color: var(--human-text); line-height: 1.8; padding: 0 0.25rem; }}
-  .human::before {{ content: "Director\'s Commentary (Nick)"; display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; }}
+  .human-label {{ display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; }}
+  .human-label img {{ width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }}
   .human strong {{ font-weight: 600; }}
   .architecture {{ background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.5rem; position: relative; }}
   .architecture::before {{ content: 'CLAUDE OPUS 4.6'; position: absolute; top: -0.65rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; color: var(--accent); background: var(--bg); border: 1px solid var(--machine-border); padding: 0.15rem 0.6rem; border-radius: 99px; }}
@@ -1149,6 +1152,15 @@ def build():
     index_html = INDEX_TEMPLATE.format(episodes=episodes_html)
     (DIST_DIR / "index.html").write_text(index_html)
     print("  Built index.html")
+
+    # Copy images
+    images_src = ROOT / "images"
+    if images_src.exists():
+        images_dst = DIST_DIR / "images"
+        if images_dst.exists():
+            shutil.rmtree(images_dst)
+        shutil.copytree(images_src, images_dst)
+        print("  Copied images/")
 
     # CNAME for custom domain
     (DIST_DIR / "CNAME").write_text("overarchitected.com")
