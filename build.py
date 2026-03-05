@@ -962,7 +962,7 @@ var observer = new IntersectionObserver(function(entries) {{
     if (entry.isIntersecting) {{
       var start = parseInt(entry.target.dataset.start);
       var heading = entry.target.querySelector('h2');
-      if (heading && isReady && start !== currentStart) {{
+      if (heading && isReady && start !== currentStart && !videoScrolling) {{
         currentStart = start;
         if (activePlayer) activePlayer.seekTo(start, true);
         var stext = heading.textContent.replace(/^\d{{2}}\s*/, '');
@@ -974,6 +974,52 @@ var observer = new IntersectionObserver(function(entries) {{
 }}, {{ rootMargin: '-20% 0px -60% 0px', threshold: 0 }});
 
 sections.forEach(function(s) {{ observer.observe(s); }});
+
+// --- Reverse sync: video progress scrolls the page ---
+var videoScrolling = false; // flag to prevent feedback loop
+var reverseStart = -1;
+
+// Build sorted list of section timestamps
+var sectionList = [];
+sections.forEach(function(s) {{
+  sectionList.push({{ el: s, start: parseInt(s.dataset.start) }});
+}});
+sectionList.sort(function(a, b) {{ return a.start - b.start; }});
+
+// Override observer to skip when video is driving the scroll
+var origObserverCallback = observer;
+// Actually, just use the videoScrolling flag in the existing observer
+// Patch: wrap the seek call to check flag
+
+setInterval(function() {{
+  if (!isReady || !activePlayer || !activePlayer.getCurrentTime) return;
+  if (isDragging || isResizing) return;
+  var state = activePlayer.getPlayerState();
+  if (state !== YT.PlayerState.PLAYING) return;
+
+  var t = activePlayer.getCurrentTime();
+  // Find which section we're in
+  var targetSection = null;
+  for (var j = sectionList.length - 1; j >= 0; j--) {{
+    if (t >= sectionList[j].start) {{
+      targetSection = sectionList[j];
+      break;
+    }}
+  }}
+  if (!targetSection || targetSection.start === reverseStart) return;
+  reverseStart = targetSection.start;
+
+  // Check if this section is already mostly visible
+  var rect = targetSection.el.getBoundingClientRect();
+  var inView = rect.top > 0 && rect.top < window.innerHeight * 0.6;
+  if (inView) return;
+
+  // Scroll to center the section
+  videoScrolling = true;
+  var offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
+  window.scrollTo({{ top: Math.max(0, offset), behavior: 'smooth' }});
+  setTimeout(function() {{ videoScrolling = false; }}, 1000);
+}}, 500);
 </script>"""
 
 
