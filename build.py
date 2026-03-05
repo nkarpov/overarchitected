@@ -255,6 +255,8 @@ TEMPLATE = """<!DOCTYPE html>
   header h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.75rem; }}
   header .subtitle {{ color: var(--text-muted); font-size: 0.95rem; }}
   .intro {{ font-size: 1.05rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); line-height: 1.8; }}
+  .info-callout {{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1.15rem; margin-bottom: 2.5rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.65; }}
+  .info-callout strong {{ color: var(--text); font-weight: 600; }}
   .intro p + p {{ margin-top: 1rem; }}
   .section {{ margin-bottom: 3rem; }}
   .section h2 {{ font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 1rem; }}
@@ -320,6 +322,10 @@ TEMPLATE = """<!DOCTYPE html>
   <h1>{title}</h1>
   <div class="subtitle">{subtitle}</div>
 </header>
+
+<div class="info-callout">
+  This blog is an experiment in writing with AI without actually writing <em>with</em> AI. Each section has two voices. The summary in the card is <strong>Claude Opus 4.6</strong> &mdash; fed the raw episode transcript, completely unedited. The response underneath is <strong>Nick</strong> &mdash; also completely unedited, just reacting in real time. The video in the corner follows your scroll, jumping to the relevant part of the episode as you read. You can drag it, toss it, resize it, or minimize it.
+</div>
 
 {body}
 
