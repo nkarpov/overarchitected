@@ -262,6 +262,7 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
 <title>{title}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -279,7 +280,8 @@ TEMPLATE = """<!DOCTYPE html>
   body {{ font-family: 'DM Sans', Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
   header {{ margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }}
-  header h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.75rem; }}
+  header h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }}
+  header h1 img {{ height: 1.6em; width: auto; }}
   header .subtitle {{ color: var(--text-muted); font-size: 0.95rem; }}
   .intro {{ font-size: 1.05rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); line-height: 1.8; }}
   .info-callout {{ background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1.15rem; margin-bottom: 2.5rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.65; }}
@@ -405,7 +407,7 @@ TEMPLATE = """<!DOCTYPE html>
 <div class="layout">
 <div class="container">
 <header>
-  <h1><a href="/" style="color:inherit;text-decoration:none;">{title}</a></h1>
+  <h1><a href="/" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:0.5rem;"><img src="/images/favicon.svg" alt="OA">{title}</a></h1>
   <div class="subtitle">{subtitle}</div>
 </header>
 
@@ -1110,13 +1112,15 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
 <title>OverArchitected</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{ font-family: 'DM Sans', Arial, sans-serif; background: #F9F7F4; color: #0B2026; line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
-  h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem; }}
+  h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }}
+  h1 img {{ height: 1.6em; width: auto; }}
   .tagline {{ color: #5a6670; font-size: 0.95rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #e0ddd8; }}
   .episode {{ display: block; padding: 1.25rem 1.5rem; margin-bottom: 1rem; background: #fff; border: 1px solid #e0ddd8; border-radius: 4px; text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }}
   .episode:hover {{ border-color: #EB1600; box-shadow: 0 2px 8px rgba(235, 22, 0, 0.1); }}
@@ -1127,7 +1131,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <body>
 <div class="layout">
 <div class="container">
-  <h1>OverArchitected</h1>
+  <h1><img src="/images/favicon.svg" alt="OA">OverArchitected</h1>
   <div class="tagline">New Databricks features, shoehorned into one architecture to see if it's actually realistic.</div>
   {episodes}
 </div>
