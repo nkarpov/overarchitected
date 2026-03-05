@@ -309,7 +309,7 @@ TEMPLATE = """<!DOCTYPE html>
     .machine {{ padding: 1rem 1.15rem; }}
     .human {{ font-size: 1rem; }}
     .architecture pre {{ font-size: 0.7rem; }}
-    .pip {{ width: 200px; min-width: 160px; max-width: 85vw; }}
+    .pip {{ width: 65vw; min-width: 160px; }}
     .pip-toggle {{ bottom: 0.75rem; right: 0.75rem; width: 40px; height: 40px; font-size: 1rem; }}
   }}
 </style>
@@ -340,6 +340,7 @@ PIP_BLOCK = """<!-- PiP Video Player -->
     <span class="pip-section" id="pip-section">Loading...</span>
     <div class="pip-controls">
       <button class="pip-btn" id="pip-playpause" title="Play/Pause">&#9654;</button>
+      <button class="pip-btn pip-size-toggle" id="pip-size-toggle" title="Toggle size" style="display:none;">&#8596;</button>
       <button class="pip-btn" id="pip-close" title="Minimize">&times;</button>
     </div>
   </div>
@@ -354,6 +355,7 @@ var tag = document.createElement('script');
 tag.src = 'https://www.youtube.com/iframe_api';
 document.head.appendChild(tag);
 
+var PAD = 24; // min distance from any window edge
 var player, isReady = false, currentStart = 0;
 var pip = document.getElementById('pip');
 var pipSection = document.getElementById('pip-section');
@@ -362,11 +364,26 @@ var pipClose = document.getElementById('pip-close');
 var pipReopen = document.getElementById('pip-reopen');
 var pipDrag = document.getElementById('pip-drag');
 var pipResize = document.getElementById('pip-resize');
+var pipSizeToggle = document.getElementById('pip-size-toggle');
 
-// Invisible overlay to capture mouse over iframe during drag/resize
 var overlay = document.createElement('div');
 overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;display:none;';
 pip.appendChild(overlay);
+
+function isMobile() {{ return window.innerWidth <= 600; }}
+
+function clamp(x, y, w) {{
+  var h = pip.offsetHeight;
+  x = Math.max(PAD, Math.min(window.innerWidth - w - PAD, x));
+  y = Math.max(PAD, Math.min(window.innerHeight - h - PAD, y));
+  return [x, y];
+}}
+
+function applyPos(x, y) {{
+  var c = clamp(x, y, pip.offsetWidth);
+  pip.style.left = c[0] + 'px';
+  pip.style.top = c[1] + 'px';
+}}
 
 function onYouTubeIframeAPIReady() {{
   player = new YT.Player('pip-player', {{
@@ -377,6 +394,12 @@ function onYouTubeIframeAPIReady() {{
         isReady = true;
         pip.classList.remove('hidden');
         document.body.classList.add('pip-visible');
+        if (isMobile()) {{ pipSizeToggle.style.display = 'inline'; pipResize.style.display = 'none'; }}
+        // Switch to absolute and clamp to respect padding
+        setTimeout(function() {{
+          switchToAbsolute();
+          applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top));
+        }}, 50);
         player.playVideo();
       }},
       onStateChange: function(e) {{
@@ -404,7 +427,18 @@ pipReopen.addEventListener('click', function() {{
   pipReopen.style.display = 'none';
 }});
 
-// --- Switch to absolute positioning so we can freely place it ---
+// --- Mobile size toggle (65% <-> 95%) ---
+var mobileSmall = true;
+pipSizeToggle.addEventListener('click', function() {{
+  mobileSmall = !mobileSmall;
+  var w = mobileSmall ? 0.65 : 1.0;
+  if (!mobileSmall) {{ pip.style.width = (window.innerWidth - PAD * 2) + 'px'; var rect = pip.getBoundingClientRect(); applyPos(rect.left, rect.top); return; }}
+  pip.style.width = (window.innerWidth * w) + 'px';
+  var rect = pip.getBoundingClientRect();
+  applyPos(rect.left, rect.top);
+}});
+
+// --- Switch to absolute positioning ---
 function switchToAbsolute() {{
   var rect = pip.getBoundingClientRect();
   pip.style.left = rect.left + 'px';
@@ -413,8 +447,9 @@ function switchToAbsolute() {{
   pip.style.bottom = 'auto';
 }}
 
-// --- DRAG ---
+// --- DRAG with velocity tracking ---
 var isDragging = false, dragX, dragY;
+var velX = 0, velY = 0, lastMoveX = 0, lastMoveY = 0, lastMoveTime = 0;
 
 function onDragStart(cx, cy) {{
   isDragging = true;
@@ -423,15 +458,27 @@ function onDragStart(cx, cy) {{
   var rect = pip.getBoundingClientRect();
   dragX = cx - rect.left;
   dragY = cy - rect.top;
+  velX = 0; velY = 0;
+  lastMoveX = cx; lastMoveY = cy;
+  lastMoveTime = Date.now();
   switchToAbsolute();
+  cancelMomentum();
 }}
 
 function onDragMove(cx, cy) {{
   if (!isDragging) return;
-  var x = Math.max(0, Math.min(window.innerWidth - pip.offsetWidth, cx - dragX));
-  var y = Math.max(0, Math.min(window.innerHeight - pip.offsetHeight, cy - dragY));
-  pip.style.left = x + 'px';
-  pip.style.top = y + 'px';
+  var now = Date.now();
+  var dt = Math.max(1, now - lastMoveTime);
+  velX = (cx - lastMoveX) / dt * 16; // normalize to ~frame
+  velY = (cy - lastMoveY) / dt * 16;
+  lastMoveX = cx; lastMoveY = cy;
+  lastMoveTime = now;
+  applyPos(cx - dragX, cy - dragY);
+}}
+
+var momentumId = null;
+function cancelMomentum() {{
+  if (momentumId) {{ cancelAnimationFrame(momentumId); momentumId = null; }}
 }}
 
 function onDragEnd() {{
@@ -439,8 +486,49 @@ function onDragEnd() {{
   isDragging = false;
   pip.classList.remove('dragging');
   overlay.style.display = 'none';
+
+  // If velocity is meaningful, start momentum
+  var speed = Math.sqrt(velX * velX + velY * velY);
+  if (speed > 2) {{
+    startMomentum();
+  }}
 }}
 
+function startMomentum() {{
+  var friction = 0.92;
+  var bounce = -0.5;
+  var x = parseFloat(pip.style.left);
+  var y = parseFloat(pip.style.top);
+  var w = pip.offsetWidth;
+  var h = pip.offsetHeight;
+
+  function frame() {{
+    velX *= friction;
+    velY *= friction;
+
+    x += velX;
+    y += velY;
+
+    // Bounce off edges
+    if (x < PAD) {{ x = PAD; velX *= bounce; }}
+    if (x > window.innerWidth - w - PAD) {{ x = window.innerWidth - w - PAD; velX *= bounce; }}
+    if (y < PAD) {{ y = PAD; velY *= bounce; }}
+    if (y > window.innerHeight - h - PAD) {{ y = window.innerHeight - h - PAD; velY *= bounce; }}
+
+    pip.style.left = x + 'px';
+    pip.style.top = y + 'px';
+
+    if (Math.abs(velX) > 0.3 || Math.abs(velY) > 0.3) {{
+      momentumId = requestAnimationFrame(frame);
+    }} else {{
+      momentumId = null;
+    }}
+  }}
+  cancelMomentum();
+  momentumId = requestAnimationFrame(frame);
+}}
+
+// Mouse
 pipDrag.addEventListener('mousedown', function(e) {{
   if (e.target.closest('.pip-btn')) return;
   e.preventDefault();
@@ -449,11 +537,12 @@ pipDrag.addEventListener('mousedown', function(e) {{
 document.addEventListener('mousemove', function(e) {{ onDragMove(e.clientX, e.clientY); }});
 document.addEventListener('mouseup', onDragEnd);
 
+// Touch
 pipDrag.addEventListener('touchstart', function(e) {{
   if (e.target.closest('.pip-btn')) return;
   e.preventDefault();
   var t = e.touches[0];
-  pip.style.width = pip.getBoundingClientRect().width + 'px';
+  if (isMobile()) pip.style.width = pip.getBoundingClientRect().width + 'px';
   onDragStart(t.clientX, t.clientY);
 }});
 document.addEventListener('touchmove', function(e) {{
@@ -461,11 +550,11 @@ document.addEventListener('touchmove', function(e) {{
 }});
 document.addEventListener('touchend', onDragEnd);
 
-// --- RESIZE ---
-// Grows away from the nearest window edges, anchoring the closest corner.
+// --- RESIZE (desktop only) ---
 var isResizing = false, resStartX, resStartY, resStartW, resStartRect;
 
 pipResize.addEventListener('mousedown', function(e) {{
+  if (isMobile()) return;
   e.preventDefault();
   e.stopPropagation();
   isResizing = true;
@@ -481,35 +570,28 @@ pipResize.addEventListener('mousedown', function(e) {{
 document.addEventListener('mousemove', function(e) {{
   if (!isResizing) return;
   var rect = resStartRect;
-  // Figure out which corner is the anchor (closest to a window edge)
   var cx = rect.left + rect.width / 2;
   var cy = rect.top + rect.height / 2;
   var anchorRight = cx > window.innerWidth / 2;
   var anchorBottom = cy > window.innerHeight / 2;
 
-  // Determine resize direction from mouse delta
   var dx = e.clientX - resStartX;
   var dy = e.clientY - resStartY;
-  // Use whichever axis moved more, maintain aspect ratio
   var delta = Math.abs(dx) > Math.abs(dy) ? dx : dy * (16/9);
-  // If anchored right/bottom, dragging left/up = bigger
   var sign = (anchorRight || anchorBottom) ? -1 : 1;
   var newW = Math.max(260, Math.min(640, resStartW + delta * sign));
 
   pip.style.width = newW + 'px';
 
-  // Reposition: keep the anchor corner fixed
-  if (anchorRight) {{
-    pip.style.left = (rect.right - newW) + 'px';
-  }} else {{
-    pip.style.left = rect.left + 'px';
-  }}
+  var newLeft = anchorRight ? (rect.right - newW) : rect.left;
+  var newTop = rect.top;
   if (anchorBottom) {{
-    var newH = newW * 9 / 16 + 30; // 30 for header bar approx
-    pip.style.top = (rect.bottom - newH) + 'px';
-  }} else {{
-    pip.style.top = rect.top + 'px';
+    var newH = newW * 9 / 16 + 30;
+    newTop = rect.bottom - newH;
   }}
+  var c = clamp(newLeft, newTop, newW);
+  pip.style.left = c[0] + 'px';
+  pip.style.top = c[1] + 'px';
 }});
 
 document.addEventListener('mouseup', function() {{
@@ -523,16 +605,14 @@ document.addEventListener('mouseup', function() {{
 // --- Keep pip in viewport on window resize ---
 window.addEventListener('resize', function() {{
   if (pip.classList.contains('hidden') || pip.style.right !== 'auto') return;
-  var rect = pip.getBoundingClientRect();
+  // Mobile size toggle visibility
+  if (isMobile()) {{ pipSizeToggle.style.display = 'inline'; pipResize.style.display = 'none'; }}
+  else {{ pipSizeToggle.style.display = 'none'; pipResize.style.display = ''; }}
   var w = pip.offsetWidth;
-  if (w > window.innerWidth - 16) {{
-    w = Math.max(160, window.innerWidth - 16);
-    pip.style.width = w + 'px';
-  }}
-  var x = Math.max(0, Math.min(window.innerWidth - w, rect.left));
-  var y = Math.max(0, Math.min(window.innerHeight - pip.offsetHeight, rect.top));
-  pip.style.left = x + 'px';
-  pip.style.top = y + 'px';
+  var maxW = window.innerWidth - PAD * 2;
+  if (w > maxW) {{ w = Math.max(160, maxW); pip.style.width = w + 'px'; }}
+  var rect = pip.getBoundingClientRect();
+  applyPos(rect.left, rect.top);
 }});
 
 // --- Scroll-seek ---
