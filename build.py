@@ -572,6 +572,7 @@ document.addEventListener('touchend', onDragEnd);
 var overlayStartX, overlayStartY, overlayMoved;
 
 overlay.addEventListener('mousedown', function(e) {{
+  e.preventDefault();
   overlayStartX = e.clientX;
   overlayStartY = e.clientY;
   overlayMoved = false;
@@ -610,9 +611,9 @@ overlay.addEventListener('touchmove', function(e) {{
   var t = e.touches[0];
   var dx = t.clientX - overlayStartX;
   var dy = t.clientY - overlayStartY;
-  if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) overlayMoved = true;
+  if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {{ overlayMoved = true; e.preventDefault(); }}
   onDragMove(t.clientX, t.clientY);
-}}, {{ passive: true }});
+}}, {{ passive: false }});
 
 overlay.addEventListener('touchend', function(e) {{
   if (!overlayMoved) {{
