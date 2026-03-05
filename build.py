@@ -238,16 +238,19 @@ TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   :root {{
-    --bg: #fafafa; --surface: #fff; --border: #e5e5e5;
-    --text: #1a1a1a; --text-muted: #717171;
-    --accent: #6e56cf; --accent-dim: rgba(110, 86, 207, 0.08);
-    --machine-bg: #f5f3ff; --machine-border: #e4dffc; --machine-text: #555;
-    --human-text: #1a1a1a;
+    --bg: #F9F7F4; --surface: #fff; --border: #e0ddd8;
+    --text: #0B2026; --text-muted: #5a6670;
+    --accent: #EB1600; --accent-dim: rgba(235, 22, 0, 0.06);
+    --accent-cyan: #40d1f5;
+    --accent-blue: #4462c9;
+    --machine-bg: #eef1f8; --machine-border: #d4dbe8; --machine-text: #4a5568;
+    --human-text: #0B2026;
+    --radius: 4px;
   }}
-  body {{ font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }}
+  body {{ font-family: 'DM Sans', Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
   header {{ margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }}
   header h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.75rem; }}
@@ -257,28 +260,28 @@ TEMPLATE = """<!DOCTYPE html>
   .section {{ margin-bottom: 3rem; }}
   .section h2 {{ font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 1rem; }}
   .section h2 .feat-num {{ color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 500; margin-right: 0.4rem; }}
-  .release-notes {{ margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }}
+  .release-notes {{ margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }}
   .release-notes .rn-label {{ font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }}
   .release-notes .rn-label::before {{ content: '\\1F4C4 '; }}
   .release-notes .rn-links {{ display: flex; flex-wrap: wrap; gap: 0.5rem; }}
-  .release-notes a {{ font-size: 0.82rem; font-weight: 500; color: var(--accent); text-decoration: none; padding: 0.2em 0.6em; background: var(--accent-dim); border-radius: 4px; transition: background 0.15s; }}
-  .release-notes a:hover {{ background: rgba(110, 86, 207, 0.18); text-decoration: underline; }}
+  .release-notes a {{ font-size: 0.82rem; font-weight: 500; color: var(--accent-blue); text-decoration: none; padding: 0.2em 0.6em; background: var(--accent-dim); border-radius: 4px; transition: background 0.15s; }}
+  .release-notes a:hover {{ background: rgba(68, 98, 201, 0.14); text-decoration: underline; }}
   .release-notes a::after {{ content: ' \\2197'; font-size: 0.7em; }}
-  .video-wrap {{ position: relative; width: 100%; padding-bottom: 56.25%; margin-bottom: 1.25rem; border-radius: 8px; overflow: hidden; background: #000; }}
+  .video-wrap {{ position: relative; width: 100%; padding-bottom: 56.25%; margin-bottom: 1.25rem; border-radius: var(--radius); overflow: hidden; background: #000; }}
   .video-wrap iframe {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }}
   .video-wrap.placeholder {{ padding-bottom: 0; height: 56px; background: var(--surface); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; }}
   .video-wrap.placeholder span {{ font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-muted); }}
   .video-wrap.placeholder .timestamp {{ color: var(--accent); font-weight: 500; }}
-  .machine {{ position: relative; background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; font-size: 0.9rem; color: var(--machine-text); line-height: 1.7; }}
-  .machine::before {{ content: 'OPUS'; position: absolute; top: -0.55rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.12em; color: var(--accent); background: var(--machine-bg); padding: 0 0.5rem; }}
+  .machine {{ position: relative; background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; font-size: 0.9rem; color: var(--machine-text); line-height: 1.7; }}
+  .machine::before {{ content: 'CLAUDE OPUS 4.6'; position: absolute; top: -0.65rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; color: var(--accent); background: var(--bg); border: 1px solid var(--machine-border); padding: 0.15rem 0.6rem; border-radius: 99px; }}
   .machine p + p {{ margin-top: 0.75rem; }}
-  .machine strong {{ color: #333; font-weight: 500; }}
+  .machine strong {{ color: #0B2026; font-weight: 500; }}
   .machine code {{ font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; background: rgba(0,0,0,0.04); padding: 0.15em 0.4em; border-radius: 3px; }}
   .human {{ font-size: 1.05rem; color: var(--human-text); line-height: 1.8; padding: 0 0.25rem; }}
   .human::before {{ content: 'Nick \\2014'; display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; }}
   .human strong {{ font-weight: 600; }}
-  .architecture {{ background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: 8px; padding: 1.5rem; position: relative; }}
-  .architecture::before {{ content: 'OPUS'; position: absolute; top: -0.55rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.12em; color: var(--accent); background: var(--machine-bg); padding: 0 0.5rem; }}
+  .architecture {{ background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.5rem; position: relative; }}
+  .architecture::before {{ content: 'CLAUDE OPUS 4.6'; position: absolute; top: -0.65rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; color: var(--accent); background: var(--bg); border: 1px solid var(--machine-border); padding: 0.15rem 0.6rem; border-radius: 99px; }}
   .architecture pre {{ font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--machine-text); line-height: 1.8; overflow-x: auto; white-space: pre; }}
   .architecture pre .arrow {{ color: var(--accent); }}
   hr.divider {{ border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }}
@@ -318,16 +321,16 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OverArchitected</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ font-family: 'Inter', -apple-system, sans-serif; background: #fafafa; color: #1a1a1a; line-height: 1.7; -webkit-font-smoothing: antialiased; }}
+  body {{ font-family: 'DM Sans', Arial, sans-serif; background: #F9F7F4; color: #0B2026; line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
   h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem; }}
-  .tagline {{ color: #717171; font-size: 0.95rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #e5e5e5; }}
-  .episode {{ display: block; padding: 1.25rem 1.5rem; margin-bottom: 1rem; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }}
-  .episode:hover {{ border-color: #6e56cf; box-shadow: 0 2px 8px rgba(110, 86, 207, 0.1); }}
+  .tagline {{ color: #5a6670; font-size: 0.95rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #e5e5e5; }}
+  .episode {{ display: block; padding: 1.25rem 1.5rem; margin-bottom: 1rem; background: #fff; border: 1px solid #e5e5e5; border-radius: var(--radius); text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }}
+  .episode:hover {{ border-color: #EB1600; box-shadow: 0 2px 8px rgba(235, 22, 0, 0.1); }}
   .episode .ep-title {{ font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }}
-  .episode .ep-date {{ font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #6e56cf; }}
+  .episode .ep-date {{ font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #EB1600; }}
 </style>
 </head>
 <body>
