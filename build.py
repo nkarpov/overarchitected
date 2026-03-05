@@ -1032,6 +1032,7 @@ setInterval(function() {{
 var navUp = document.getElementById('vs-nav-up');
 var navDown = document.getElementById('vs-nav-down');
 var currentSectionIdx = -1;
+var navScrolling = false;
 
 function updateNavButtons() {{
   if (!navUp || !navDown) return;
@@ -1041,20 +1042,23 @@ function updateNavButtons() {{
 
 function scrollToSection(idx) {{
   if (idx < 0 || idx >= sectionList.length) return;
+  navScrolling = true;
   currentSectionIdx = idx;
   var el = sectionList[idx].el;
   var rect = el.getBoundingClientRect();
   var offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
   window.scrollTo({{ top: Math.max(0, offset), behavior: 'smooth' }});
   updateNavButtons();
+  setTimeout(function() {{ navScrolling = false; }}, 800);
 }}
 
 if (navUp) navUp.addEventListener('click', function() {{ scrollToSection(currentSectionIdx - 1); }});
 if (navDown) navDown.addEventListener('click', function() {{ scrollToSection(currentSectionIdx + 1); }});
 
-// Track current section from observer
+// Track current section from observer (skip during nav scroll)
 var origObsCb = observer;
 var sectionObserver2 = new IntersectionObserver(function(entries) {{
+  if (navScrolling) return;
   entries.forEach(function(entry) {{
     if (entry.isIntersecting) {{
       for (var k = 0; k < sectionList.length; k++) {{
@@ -1069,8 +1073,9 @@ var sectionObserver2 = new IntersectionObserver(function(entries) {{
 }}, {{ rootMargin: '-20% 0px -60% 0px', threshold: 0 }});
 sections.forEach(function(s) {{ sectionObserver2.observe(s); }});
 
-// Reset index when scrolled above all sections
+// Reset index when scrolled above all sections (skip during nav scroll)
 window.addEventListener('scroll', function() {{
+  if (navScrolling) return;
   if (sectionList.length && sectionList[0].el.getBoundingClientRect().top > window.innerHeight * 0.5) {{
     currentSectionIdx = -1;
     updateNavButtons();
@@ -1177,6 +1182,7 @@ def build():
             "slug": slug,
             "title": meta.get("title", slug),
             "date": str(meta.get("date", "")),
+            "sections": [s["heading"] for s in meta.get("sections", []) if s.get("heading")],
         })
 
     # Second pass: generate prev/next navigation
@@ -1217,6 +1223,39 @@ def build():
             shutil.rmtree(images_dst)
         shutil.copytree(images_src, images_dst)
         print("  Copied images/")
+
+    # Generate llms.txt
+    llms_lines = [
+        "# OverArchitected",
+        "",
+        "> Companion blog for the OverArchitected podcast with Nick Karpov and Holly Smith — covering new Databricks features each month.",
+        "",
+        "## Format",
+        "",
+        "Each episode pairs two voices:",
+        '- **Machine (Claude Opus 4.6):** Structured, unedited summaries of each feature — "What is it?", "Is it for you?", "Try it"',
+        "- **Human (Nick):** Unedited commentary and opinion on each feature",
+        "",
+        "Neither side is edited. The machine does the recap, the human does the opinion.",
+        "",
+        "## Episodes",
+        "",
+    ]
+    for e in reversed(index_entries):
+        features = ", ".join(e["sections"]) if e["sections"] else ""
+        llms_lines.append(f'- [{e["title"]}](/{e["slug"]}/): {features}')
+    llms_lines += [
+        "",
+        "## About",
+        "",
+        "- **Site:** overarchitected.com",
+        "- **YouTube:** [OverArchitected playlist](https://www.youtube.com/playlist?list=PLTPXxbhUt-YVmQhBv7kb12GBAhepCpAWu)",
+        "- **Hosts:** Nick Karpov & Holly Smith (Databricks)",
+        "- **Topics:** Databricks platform features, data engineering, AI/ML, lakehouse architecture",
+        "",
+    ]
+    (DIST_DIR / "llms.txt").write_text("\n".join(llms_lines))
+    print("  Generated llms.txt")
 
     # CNAME for custom domain
     (DIST_DIR / "CNAME").write_text("overarchitected.com")
