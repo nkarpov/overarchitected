@@ -275,6 +275,7 @@ TEMPLATE = """<!DOCTYPE html>
     --human-text: #0B2026;
     --radius: 4px;
   }}
+  html {{ font-size: 110%; }}
   body {{ font-family: 'DM Sans', Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
   header {{ margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }}
@@ -347,6 +348,9 @@ TEMPLATE = """<!DOCTYPE html>
   .video-sidebar .vs-controls {{ display: flex; gap: 0.35rem; flex-shrink: 0; }}
   .video-sidebar .vs-btn {{ background: none; border: none; color: #fff; opacity: 0.6; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; line-height: 1; transition: opacity 0.15s; }}
   .video-sidebar .vs-btn:hover {{ opacity: 1; }}
+  .vs-nav {{ display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin: 0.4rem auto; background: none; border: none; color: var(--text-muted); cursor: pointer; transition: color 0.15s, opacity 0.15s; opacity: 0; pointer-events: none; }}
+  .vs-nav.visible {{ opacity: 0.5; pointer-events: auto; }}
+  .vs-nav:hover {{ opacity: 1; color: var(--accent); }}
 
   @media (max-width: 1100px) {{
     .layout {{ display: block; padding: 0; }}
@@ -1023,11 +1027,62 @@ setInterval(function() {{
   window.scrollTo({{ top: Math.max(0, offset), behavior: 'smooth' }});
   setTimeout(function() {{ videoScrolling = false; }}, 1000);
 }}, 500);
+
+// --- Section nav buttons (sidebar) ---
+var navUp = document.getElementById('vs-nav-up');
+var navDown = document.getElementById('vs-nav-down');
+var currentSectionIdx = -1;
+
+function updateNavButtons() {{
+  if (!navUp || !navDown) return;
+  navUp.classList.toggle('visible', currentSectionIdx > 0);
+  navDown.classList.toggle('visible', currentSectionIdx < sectionList.length - 1);
+}}
+
+function scrollToSection(idx) {{
+  if (idx < 0 || idx >= sectionList.length) return;
+  currentSectionIdx = idx;
+  var el = sectionList[idx].el;
+  var rect = el.getBoundingClientRect();
+  var offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
+  window.scrollTo({{ top: Math.max(0, offset), behavior: 'smooth' }});
+  updateNavButtons();
+}}
+
+if (navUp) navUp.addEventListener('click', function() {{ scrollToSection(currentSectionIdx - 1); }});
+if (navDown) navDown.addEventListener('click', function() {{ scrollToSection(currentSectionIdx + 1); }});
+
+// Track current section from observer
+var origObsCb = observer;
+var sectionObserver2 = new IntersectionObserver(function(entries) {{
+  entries.forEach(function(entry) {{
+    if (entry.isIntersecting) {{
+      for (var k = 0; k < sectionList.length; k++) {{
+        if (sectionList[k].el === entry.target) {{
+          currentSectionIdx = k;
+          updateNavButtons();
+          break;
+        }}
+      }}
+    }}
+  }});
+}}, {{ rootMargin: '-20% 0px -60% 0px', threshold: 0 }});
+sections.forEach(function(s) {{ sectionObserver2.observe(s); }});
+
+// Reset index when scrolled above all sections
+window.addEventListener('scroll', function() {{
+  if (sectionList.length && sectionList[0].el.getBoundingClientRect().top > window.innerHeight * 0.5) {{
+    currentSectionIdx = -1;
+    updateNavButtons();
+  }}
+}});
+updateNavButtons();
 </script>"""
 
 
 VIDEO_SIDEBAR = """<div class="video-sidebar">
   <div class="video-sticky">
+    <button class="vs-nav vs-nav-up" id="vs-nav-up" title="Previous section"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" width="18" height="18"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm11.3-395.3l112 112c4.6 4.6 5.9 11.5 3.5 17.4s-8.3 9.9-14.8 9.9l-64 0 0 96c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-96-64 0c-6.5 0-12.3-3.9-14.8-9.9s-1.1-12.9 3.5-17.4l112-112c6.2-6.2 16.4-6.2 22.6 0z"/></svg></button>
     <div class="video-frame">
       <div id="sidebar-player"></div>
     </div>
@@ -1039,6 +1094,7 @@ VIDEO_SIDEBAR = """<div class="video-sidebar">
         <button class="vs-btn" id="vs-detach" title="Detach to PiP">&#x2922;</button>
       </div>
     </div>
+    <button class="vs-nav vs-nav-down" id="vs-nav-down" title="Next section"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" width="18" height="18"><path d="M256 0a256 256 0 1 0 0 512A256 256 0 1 0 256 0zM244.7 395.3l-112-112c-4.6-4.6-5.9-11.5-3.5-17.4s8.3-9.9 14.8-9.9l64 0 0-96c0-17.7 14.3-32 32-32l32 0c17.7 0 32 14.3 32 32l0 96 64 0c6.5 0 12.3 3.9 14.8 9.9s1.1 12.9-3.5 17.4l-112 112c-6.2 6.2-16.4 6.2-22.6 0z"/></svg></button>
   </div>
 </div>"""
 
