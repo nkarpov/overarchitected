@@ -1,0 +1,72 @@
+{
+  "title": "Building OverArchitected — In One Session",
+  "summary": "What starts as 'can you access this Google Doc?' becomes a fully deployed blog at overarchitected.com in a single Claude Code session. The human keeps raising the bar — from markdown file to GitHub repo to custom HTML to PiP video player — while Claude oscillates between nailing it on the first try and getting lost in string replacements. The most interesting thread is how the format itself evolves: the human/machine pairing that defines the blog is discovered through the same human/machine dynamic that builds it.",
+  "chapters": [
+    {
+      "start": 0,
+      "end": 8,
+      "heading": "The Format Negotiation",
+      "annotation": "Nick arrives with a Google Doc transcript and a half-formed idea: machine-generated output annotated with human writing. He doesn't know exactly what he wants — 'let's just try it and see how that goes?' — but he knows the shape: two voices, visually distinct, neither edited. Claude immediately mirrors back a structured version of the idea (left-aligned machine, right-aligned human), which Nick accepts. The format is agreed before a single word of content is written. This is the pattern for the whole session: Nick sketches, Claude formalizes, Nick adjusts."
+    },
+    {
+      "start": 13,
+      "end": 45,
+      "heading": "The Assembly Line",
+      "annotation": "Nick's first real redirect: 'no I haven't even seen it, maybe we can iterate one section at a time.' Claude had generated the entire blog in one shot, but Nick wants to co-author it piece by piece. What follows is the most interesting stretch — seven features, each one: Claude summarizes the transcript, Nick responds off the cuff. Nick's voice emerges naturally. 'Autoloader is now mature enough that I can admit I didn't really understand the hype.' 'I'm sick of discerning the difference between these things. Delta? Iceberg? Just give me my tables.' The unedited quality is the point. When Nick has nothing to say about the architecture diagram, he just writes 'nothing.' Claude rolls with it."
+    },
+    {
+      "start": 49,
+      "end": 51,
+      "heading": "The Self-Critique",
+      "annotation": "Nick asks Claude to evaluate its own output. Claude is honest: the machine text is too long, the format works but needs tightening. This is a small but important moment — the human asking the machine to be its own editor. Nick agrees and they move on to distribution, which is where things get interesting."
+    },
+    {
+      "start": 62,
+      "end": 70,
+      "heading": "\"Are You Sure?\"",
+      "annotation": "Claude tries to create a tab in the Google Doc, fails, and declares: 'The Google Docs API doesn't support creating tabs programmatically.' Nick pushes back: 'are you sure it doesn't support it? just what you tried failed.' He's right. Claude researches further, finds the correct API call (addDocumentTab, not createTab), and it works. This is the clearest example in the session of why the human stays in the loop. Claude's failure mode isn't inability — it's premature certainty. Nick's correction is two sentences long and saves twenty minutes."
+    },
+    {
+      "start": 101,
+      "end": 112,
+      "heading": "The Format Flip",
+      "annotation": "Two pivots in quick succession. First: Nick realizes the blockquote convention is backwards. The machine text should be quoted, not the human text — 'I want me to be the real text and the machine to be the quote text.' This inverts the visual hierarchy and is the right call. The human voice is primary; the machine is supporting evidence. Second: frustrated with where to host the markdown, Nick says 'let's use my nkarpov user in gh to make a new repo.' Within minutes there's a live GitHub repo. Then, ten messages later, another leap: 'what if we published a single html file that works both on web and mobile?' Each pivot raises the ambition. The session hasn't even hit its midpoint."
+    },
+    {
+      "start": 133,
+      "end": 162,
+      "heading": "Architecture Crystallizes",
+      "annotation": "Nick asks: 'is there a way to keep the markdown a source of truth and have it all translate into the HTML via a generator?' Claude offers three options from simple to full-featured. Nick picks the most ambitious: build script, GitHub Actions, per-episode folder structure, auto-deploy. In thirty messages, the project goes from a single HTML file to a proper build pipeline with episodes/YYYY-MM/index.md as the source format, build.py as the generator, and GitHub Pages deployment. The README gets written. The architecture is set — and it still holds today."
+    },
+    {
+      "start": 163,
+      "end": 194,
+      "heading": "Brand Polish",
+      "annotation": "Nick sends the Databricks brand guidelines and the iteration loop tightens. Six rapid exchanges: 'lean into the reds' → done. 'Make it clear it's Claude Opus 4.6' → done. 'The label needs to be a rounded box' → done. 'Push all these changes.' This stretch shows the session at cruising speed — Nick gives tight directional feedback, Claude executes immediately, the gap between idea and implementation is seconds. The blog starts looking like a real Databricks property."
+    },
+    {
+      "start": 203,
+      "end": 254,
+      "heading": "\"Let's Get Crazy\"",
+      "annotation": "The most memorable moment in the session. Nick: 'what if the youtube video was like an overlay or something like that, and as you scroll down the page it jumps to that section of the video? Like a PiP.' Claude builds it — sticky player, IntersectionObserver for scroll-seek, per-section timestamps. It fails on file:// (YouTube blocks local embeds). Claude spins up a local server. Nick sees it working: 'holy shit thats SO sick okay please publish this as is.' The feature that started as 'let's get crazy' ships within twenty minutes. This is the session's peak — the moment where ambition and execution align perfectly."
+    },
+    {
+      "start": 258,
+      "end": 301,
+      "heading": "The Debugging Spiral",
+      "annotation": "What follows the high point is the low point. Nick wants drag and resize on the PiP. Claude writes the code — but it doesn't work. Text selection fires instead of drag (missing preventDefault). Resize goes downward past the viewport instead of away from the nearest edge. The handle moves to the wrong corner. Each fix introduces a new regression. This is the longest stretch of the session where Claude is struggling, and it's instructive: the failure mode isn't the logic, it's the execution — string replacements in build.py silently fail, leaving old code in place. Nick stays patient but direct: 'it starts in the bottom right and when I resize it, it scales downwards beyond the window.' Eventually it works, but the contrast with the PiP build speed is stark."
+    },
+    {
+      "start": 376,
+      "end": 402,
+      "heading": "Proof of System",
+      "annotation": "The real test of any architecture: can it handle the second instance? Nick points Claude at the February episode transcript and they run the same assembly-line process — Claude summarizes, Nick responds, the markdown gets committed. It works. The build pipeline produces a second episode page identical in structure to the first. The format is no longer a prototype; it's a system. Nick's response when it's done: 'fucking amazing, push it.'"
+    },
+    {
+      "start": 417,
+      "end": 456,
+      "heading": "Going Live",
+      "annotation": "Nick registers overarchitected.com. DNS records get pointed at GitHub Pages. The repo gets restructured to serve from the root. An info dialog explains the format to visitors. Nick and Claude iterate on the copy: too informal, then too formal, then just right. The blog goes from a GitHub repo curiosity to a real publication with its own domain. What started as 'can you access this Google Doc?' is now a website."
+    }
+  ]
+}
