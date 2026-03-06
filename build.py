@@ -280,8 +280,7 @@ TEMPLATE = """<!DOCTYPE html>
   body {{ font-family: 'DM Sans', Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
   header {{ margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }}
-  header h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }}
-  header h1 img {{ height: 1.6em; width: auto; }}
+  header h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.75rem; }}
   header .subtitle {{ color: var(--text-muted); font-size: 0.95rem; }}
   header .title-month {{ font-size: 1.1rem; font-weight: 500; color: var(--accent); margin-bottom: 0.4rem; letter-spacing: -0.01em; }}
   .intro {{ font-size: 1.05rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); line-height: 1.8; }}
@@ -408,7 +407,7 @@ TEMPLATE = """<!DOCTYPE html>
 <div class="layout">
 <div class="container">
 <header>
-  <h1><a href="/" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:0.5rem;"><img src="/images/favicon.svg" alt="OA">{title_main}</a></h1>
+  <h1><a href="/" style="color:inherit;text-decoration:none;">{title_main}</a></h1>
   {title_sub}
   <div class="subtitle">{subtitle}</div>
 </header>
@@ -1045,14 +1044,21 @@ var navScrolling = false;
 
 function updateNavButtons() {{
   if (!navUp || !navDown) return;
-  navUp.classList.toggle('visible', currentSectionIdx > 0);
+  navUp.classList.toggle('visible', currentSectionIdx >= 0);
   navDown.classList.toggle('visible', currentSectionIdx < sectionList.length - 1);
 }}
 
 function scrollToSection(idx) {{
-  if (idx < 0 || idx >= sectionList.length) return;
+  if (idx < -1 || idx >= sectionList.length) return;
   navScrolling = true;
   currentSectionIdx = idx;
+  if (idx === -1) {{
+    window.scrollTo({{ top: 0, behavior: 'smooth' }});
+    if (isReady && activePlayer) activePlayer.seekTo(0, true);
+    updateNavButtons();
+    setTimeout(function() {{ navScrolling = false; }}, 800);
+    return;
+  }}
   var el = sectionList[idx].el;
   var rect = el.getBoundingClientRect();
   var offset = window.pageYOffset + rect.top - (window.innerHeight / 2) + (rect.height / 2);
@@ -1086,7 +1092,10 @@ sections.forEach(function(s) {{ sectionObserver2.observe(s); }});
 window.addEventListener('scroll', function() {{
   if (navScrolling) return;
   if (sectionList.length && sectionList[0].el.getBoundingClientRect().top > window.innerHeight * 0.5) {{
-    currentSectionIdx = -1;
+    if (currentSectionIdx !== -1) {{
+      currentSectionIdx = -1;
+      if (isReady && activePlayer) activePlayer.seekTo(0, true);
+    }}
     updateNavButtons();
   }}
 }});
@@ -1126,19 +1135,19 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{ font-family: 'DM Sans', Arial, sans-serif; background: #F9F7F4; color: #0B2026; line-height: 1.7; -webkit-font-smoothing: antialiased; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }}
-  h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }}
-  h1 img {{ height: 1.6em; width: auto; }}
+  h1 {{ font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.5rem; }}
   .tagline {{ color: #5a6670; font-size: 0.95rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #e0ddd8; }}
   .episode {{ display: block; padding: 1.25rem 1.5rem; margin-bottom: 1rem; background: #fff; border: 1px solid #e0ddd8; border-radius: 4px; text-decoration: none; color: inherit; transition: border-color 0.15s, box-shadow 0.15s; }}
   .episode:hover {{ border-color: #EB1600; box-shadow: 0 2px 8px rgba(235, 22, 0, 0.1); }}
   .episode .ep-title {{ font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }}
+  .episode .ep-desc {{ font-size: 0.85rem; color: #5a6670; margin-bottom: 0.4rem; line-height: 1.5; }}
   .episode .ep-date {{ font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #EB1600; }}
 </style>
 </head>
 <body>
 <div class="layout">
 <div class="container">
-  <h1><img src="/images/favicon.svg" alt="OA">OverArchitected</h1>
+  <h1>OverArchitected</h1>
   <div class="tagline">New Databricks features, shoehorned into one architecture to see if it's actually realistic.</div>
   {episodes}
 </div>
@@ -1225,13 +1234,20 @@ def build():
             out_path.write_text(html)
 
     # Build index
-    episodes_html = "\n  ".join(
-        f'<a class="episode" href="{e["slug"]}/">\n'
-        f'    <div class="ep-title">{e["title"]}</div>\n'
-        f'    <div class="ep-date">{e["date"]}</div>\n'
-        f'  </a>'
-        for e in reversed(index_entries)
-    )
+    skip_headings = ("The Thumb Incident", "The Final Architecture", "The Rating")
+    ep_cards = []
+    for e in reversed(index_entries):
+        features = [s for s in e["sections"] if s not in skip_headings]
+        desc = ", ".join(features) if features else ""
+        desc_html = f'    <div class="ep-desc">{desc}</div>\n' if desc else ""
+        ep_cards.append(
+            f'<a class="episode" href="{e["slug"]}/">\n'
+            f'    <div class="ep-title">{e["title"]}</div>\n'
+            f'{desc_html}'
+            f'    <div class="ep-date">{e["date"]}</div>\n'
+            f'  </a>'
+        )
+    episodes_html = "\n  ".join(ep_cards)
     index_html = INDEX_TEMPLATE.format(episodes=episodes_html)
     (DIST_DIR / "index.html").write_text(index_html)
     print("  Built index.html")
@@ -1263,7 +1279,8 @@ def build():
         "",
     ]
     for e in reversed(index_entries):
-        features = ", ".join(e["sections"]) if e["sections"] else ""
+        feats = [s for s in e["sections"] if s not in skip_headings]
+        features = ", ".join(feats) if feats else ""
         llms_lines.append(f'- [{e["title"]}](/{e["slug"]}/): {features}')
     llms_lines += [
         "",

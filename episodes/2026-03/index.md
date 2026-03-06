@@ -2,13 +2,13 @@
 title: "OverArchitected: March 2026"
 date: 2026-03-04
 subtitle: "Nick Karpov & Holly Smith"
-youtube_id: "vzu06KGTOrQ"
+youtube_id: "hw_CJ7bBVN0"
 sections:
   - heading: "The Thumb Incident"
     timestamp: "0:00"
     docs: []
   - heading: "Autoloader File Events — Now Automatic"
-    timestamp: "1:18"
+    timestamp: "1:46"
     tag: "GA"
     docs:
       - label: "file events for external locations"
@@ -26,7 +26,7 @@ sections:
       - label: "Gemini 3.1 Pro"
         url: "https://docs.databricks.com/aws/en/release-notes/product/2026/february#google-gemini-31-pro-preview-now-available-as-a-databricks-hosted-model"
   - heading: "Stateless Streaming Performance"
-    timestamp: "11:40"
+    timestamp: "11:41"
     tag: "GA"
     docs:
       - label: "AQE in stateless streaming"
@@ -39,8 +39,14 @@ sections:
     docs:
       - label: "MLflow traces in Unity Catalog (Beta)"
         url: "https://docs.databricks.com/aws/en/release-notes/product/2026/january#store-and-query-mlflow-traces-in-unity-catalog-beta"
+  - heading: "Multi-Statement Transactions (+ Delta Sharing)"
+    timestamp: "20:57"
+    tag: "GA"
+    docs:
+      - label: "multi-statement transaction support"
+        url: "https://docs.databricks.com/aws/en/release-notes/runtime/18.1#delta-sharing-multi-statement-transaction-support"
   - heading: "Supervisor Agent (GA)"
-    timestamp: "24:50"
+    timestamp: "24:48"
     tag: "GA"
     docs:
       - label: "Supervisor Agent GA"
@@ -53,12 +59,6 @@ sections:
         url: "https://docs.databricks.com/aws/en/release-notes/runtime/18.0#sql-window-functions-in-metric-views"
       - label: "filter clause in aggregates"
         url: "https://docs.databricks.com/aws/en/release-notes/runtime/18.0#filter-clause-for-measure-aggregate-functions-in-metric-views"
-  - heading: "Multi-Statement Transactions (+ Delta Sharing)"
-    timestamp: "20:49"
-    tag: "GA"
-    docs:
-      - label: "multi-statement transaction support"
-        url: "https://docs.databricks.com/aws/en/release-notes/runtime/18.1#delta-sharing-multi-statement-transaction-support"
 ---
 
 ## Autoloader File Events — Now Automatic
@@ -101,6 +101,16 @@ LOL. Thank you Holly, as always, for putting up with me :). As for real time str
 
 Our trace story has been evolving. We've gone through a few iterations where one way or another traces have become available in UC. This integration isn't functionally new, but with respect to the platform I think we've found a good place for this to live. Tracing is a really hot subject... if you're on X, you've probably seen how basically anyone using an agent is self-rolling a tracing solution for both themselves and their teams. This is going to be a wild area for innovation in the coming weeks, months, years? With the pace of change of these models and harnesses... who can tell?!
 
+## Multi-Statement Transactions (+ Delta Sharing)
+
+> **What is it?** Execute multiple SQL statements against a single table as one atomic commit — no partial updates visible to readers. Now also works with Delta Sharing, meaning shared table consumers only ever see fully committed state.
+>
+> **Is it for you?** If you need to update and delete from the same table in a single logical operation (data corrections, end-of-period closings, conditional cleanup), this prevents anyone from seeing an intermediate state. Essential for shared datasets where consistency matters.
+>
+> **Try it** Wrap your statements in `BEGIN TRANSACTION` / `COMMIT`. Works in notebooks, SQL editor, and dbSQL. No configuration needed.
+
+I really want multi TABLE transactions but I'll definitely settle for this milestone for now. There's not much to say here because as a feature in the warehouse ecosystem, it's well known. For Databricks users specifically it's been a painful gap and now it's CLOSED. Thank god. On to multi-table...
+
 ## Supervisor Agent (GA)
 
 > **What is it?** The Supervisor Agent in Agent Bricks is now GA. It's a routing layer that combines up to 20 different agents or tools — agent endpoints, Unity Catalog functions, Genie spaces, and external MCP servers — into a single conversational interface. You ask a question, it figures out which sub-agent to call.
@@ -120,14 +130,4 @@ An amazing tool for composing agents without touching a keyboard, CLI, or code. 
 > **Try it** Navigate to your catalog, find or create a metric view, and use the new UI editor to define measures with window functions. Connect the metric view to a Genie space for natural language querying.
 
 Metric views are the tool to define your semantic layer with. Technically speaking they're not a new functionality, you could have always made other tables, views, etc. and just made a contract to treat those as the semantic layer. But, having these as 1st class entities in Databricks really makes that contract real and formal. Excellent feature broadly speaking, and the continuous expansion of the types of things you can define with these metric views means its something you can really trust.
-
-## Multi-Statement Transactions (+ Delta Sharing)
-
-> **What is it?** Execute multiple SQL statements against a single table as one atomic commit — no partial updates visible to readers. Now also works with Delta Sharing, meaning shared table consumers only ever see fully committed state.
->
-> **Is it for you?** If you need to update and delete from the same table in a single logical operation (data corrections, end-of-period closings, conditional cleanup), this prevents anyone from seeing an intermediate state. Essential for shared datasets where consistency matters.
->
-> **Try it** Wrap your statements in `BEGIN TRANSACTION` / `COMMIT`. Works in notebooks, SQL editor, and dbSQL. No configuration needed.
-
-I really want multi TABLE transactions but I'll definitely settle for this milestone for now. There's not much to say here because as a feature in the warehouse ecosystem, it's well known. For Databricks users specifically it's been a painful gap and now it's CLOSED. Thank god. On to multi-table...
 
