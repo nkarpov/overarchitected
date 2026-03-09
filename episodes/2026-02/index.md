@@ -82,7 +82,7 @@ sections:
 >
 > **Try it** Navigate to your workspace, go to Data Ingestion > LakeFlow Connect, and create a new connection. OAuth setup takes about 5 minutes for most connectors.
 
-Connectors are basically your lifeblood. Without them your workspace is DOA. We're iterating insanely fast here and this release just goes to show that. If you don't see a connector for your service... make some noise and we'll build it.
+Connectors are basically your lifeblood. Without them your workspace is DOA. It's hard to believe I spent years of my life in the field implementing exactly these types of connectors, which can now be deployed with just a few clicks. We're iterating insanely fast here and this release just goes to show that. I don't expect any slowdown anytime soon! If you don't see a connector for your service... make some noise and we'll build it.
 
 ## Databricks Assistant — Skills, Agent Mode, and Docs
 
@@ -92,7 +92,9 @@ Connectors are basically your lifeblood. Without them your workspace is DOA. We'
 >
 > **Try it** Open any notebook and click the Assistant icon. For Agent Mode, toggle it on in the Assistant panel. For skills, create a `.skills/` folder in your repo with a `SKILLS.md` file describing available capabilities.
 
-All the assistants. EVERYWHERE. And, now, with SKILLS.md. Personally I'm still on the fence about all the tooling in the harness world. MCP servers hosting tools, SKILLS.md, AGENTS.md, CLAUDE.md... it's exhausting. My personal favorite way to work right now is to use an extremely lightweight harness ([Pi agent!!](https://pi.dev)) with as few tools as possible with an extremely capable model (the latest, duh). This forces the model to use `bash` + CLI tool. This... works insanely well. The "are CLIs good enough?" debate continues to rage on X.
+All the assistants. EVERYWHERE. Databricks assistant is taking over every surface area of the product and I love it. There's still some hard lines between this assistant and that assistant, but I think we all see where this is going, so, expect many more updates here in the coming months. For now, asking the assistant to "create a skill based on what we've done here" at the end of any piece of work is an absolute must.
+
+As for me? I'm a CLI/TUI person and I'm still on the fence about all the tooling in the harness world. MCP servers hosting tools, SKILLS.md, AGENTS.md, CLAUDE.md... it's exhausting. My personal favorite way to work right now is to use an extremely lightweight harness ([Pi agent!!](https://pi.dev)) with as few tools as possible with an extremely capable model (the latest, duh). This forces the model to use `bash` + CLI tool. This... works insanely well. The "are CLIs good enough?" debate continues to rage on X. I ~think~ yes, but it's anyones guess how things evolve.
 
 ## forEachBatch() in Spark Declarative Pipelines
 
@@ -102,7 +104,7 @@ All the assistants. EVERYWHERE. And, now, with SKILLS.md. Personally I'm still o
 >
 > **Try it** In your SDP pipeline definition, use the new `sink` parameter with a `forEachBatch` function. The syntax mirrors classic Structured Streaming's `forEachBatch` API.
 
-This was actually my very first complaint when I saw DLT. After years in the field abusing forEachBatch() for every and any use case that didn't "fit the mold", to suddenly lose that ability in DLT was basically a non starter. In my view, this should have shipped Day 1. But, alas, here it is anyways. Amazing!
+This was actually my very first complaint when I saw DLT. After years in the field abusing forEachBatch() for every and any use case that didn't "fit the mold", to suddenly lose that ability in DLT was basically a non starter. If you've been stuck on classic Structured Streaming because of quirky SDP edges, it's time to take another look. This product has seriously matured.
 
 ## Foundation Models — Claude 4.5, GPT 5.2, Haiku
 
@@ -112,7 +114,7 @@ This was actually my very first complaint when I saw DLT. After years in the fie
 >
 > **Try it** Available immediately in the AI Playground — no setup needed. For production use, enable AI Gateway (beta preview) on a foundation model endpoint to get inference tables, PII detection, rate limiting, and usage tracking.
 
-I'm backfilling this content so I'm writing this FROM THE FUTURE MARTY! Aka. 4.5 and 5.2 are OLD NEWS. Codex 5.3 and Opus/Sonnet 4.6 are absolutely bonkers good. Start using.
+I'm backfilling this content so I'm writing this FROM THE FUTURE MARTY! Aka. 4.5 and 5.2 are OLD NEWS. Codex 5.3 and Opus/Sonnet 4.6 are absolutely bonkers good. Start using. Check out our [March episode](/2026-03/) for the latest.
 
 ## Delta Sharing to Iceberg Clients
 
@@ -122,7 +124,7 @@ I'm backfilling this content so I'm writing this FROM THE FUTURE MARTY! Aka. 4.5
 >
 > **Try it** Enable Iceberg compatibility on your table (`ALTER TABLE SET TBLPROPERTIES ('delta.universalFormat.enabledFormats' = 'iceberg')`), then add it to a Delta Share. Note: deletion vectors must be disabled on the table.
 
-I worked very closely on the Delta project for a few years. All I can say is I'm sick of discerning the difference between these things. Delta? Iceberg? Diceberg? Icelta? Who cares. Databricks supports ACID like tables on top of blob storage. That's the point. This feature, among many others, is just nailing this coffin shut.
+I worked very closely on the Delta project for a few years. All I can say is I'm sick of discerning the difference between these things. Delta? Iceberg? Diceberg? Icelta? Who cares. Databricks supports ACID like tables on top of blob storage. That's the point. This feature, among many others, is just nailing the format wars coffin shut.
 
 ## Knowledge Assistant is GA
 
@@ -132,7 +134,7 @@ I worked very closely on the Delta project for a few years. All I can say is I'm
 >
 > **Try it** Go to Machine Learning > Agent Bricks, select Knowledge Assistant, upload your documents or point to a UC volume, and deploy. You'll have a working chatbot with citations in under 10 minutes.
 
-As much as I'm obsessed with coding harnesses of late, I can't overlook how big this feature is. Anybody can point and click a smart knowledge assistant in a few minutes. We have a lot of demos now like [Casper's Kitchens](https://github.com/databricks-solutions/caspers-kitchens) that demonstrate exactly what the video shows. Try it!!
+As much as I'm obsessed with coding harnesses of late, I can't overlook how big this feature is. Anybody can point and click a smart knowledge assistant in a few minutes. So, either let your users build their own knowledge assistants, or spend the 5 minutes it takes to create one and expose it to them ASAP. We have a lot of demos now like [Casper's Kitchens](https://github.com/databricks-solutions/caspers-kitchens) that demonstrate exactly what the video shows. Try it!!
 
 ## Lakebase Autoscaling
 
@@ -142,5 +144,5 @@ As much as I'm obsessed with coding harnesses of late, I can't overlook how big 
 >
 > **Try it** In your workspace, go to SQL > Lakebase and create a new instance. It provisions in seconds. Connect from any Postgres-compatible client or use the built-in SQL editor.
 
-The thing about Lakebase is it fills the final gap on Databricks: OLTP. Serverless Postgres, autoscaling, BRANCHING(!!)... all instant. This feature will take you (and us with you) to the moon. With this feature Databricks is totally end to end: data platform, apps, operational data stores... the future is building on Databricks.
+OLTP on Databricks is something many users have wanted for a very long time. I've been waiting for it since the first time I wanted to serve a Delta table live from Databricks. Now with a simple few clicks (or one API call) I can synchronize my data directly into application databases. Lakebase is serverless, autoscaling, and instant... frankly it exceeds what I could have imagined years ago. My favorite feature is git style branching. This means I can basically use production data directly in my dev environment at almost no cost. The bigger picture around Lakebase: Databricks is now totally end to end. Data platform, apps, operational data stores... the future is building on Databricks.
 
