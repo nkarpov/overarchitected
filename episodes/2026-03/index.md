@@ -69,7 +69,7 @@ sections:
 >
 > **Try it** Create or update an external location in Unity Catalog. File events are enabled by default. Your existing Autoloader jobs will automatically benefit from event-driven file discovery.
 
-Autoloader is now mature enough that I can admit I didn't really understand what the hype was all about when we first released it. It's just Spark Structured Streaming with a file based source, right? Wrong. It's much faster than file based sources. All thanks to the file events queue. Now Databricks can orchestrate all that for you, even if it's an external location. It really goes to show you the power of iterating under an API surface area.
+Autoloader is now mature enough that I can admit I didn't really understand what the hype was all about when we first released it. It's just Spark Structured Streaming with a file based source, right? Wrong. It's much faster than file based sources. Why? Because traditionally these have depended on listing files with the underlying storage provider. Hard to believe, but, true... and slow, and expensive. The transition to the new file event queue primitives has been slow and steady, and finally coming together to the point where Databricks can orchestrate all that for you, even if it's an external location. It really goes to show you the power of iterating under your API surface area: you get the improvement without changing a line of code.
 
 ## New Foundation Models on Databricks
 
@@ -79,7 +79,9 @@ Autoloader is now mature enough that I can admit I didn't really understand what
 >
 > **Try it** Model Serving > Create Endpoint > select from Foundation Models. Pay-per-token, no provisioning. Point any OpenAI-compatible client at the endpoint URL.
 
-I've since tried Sonnet, and it's great, but, once you get a taste for the best models... why bother changing? For daily driving I think you want the best model possible - you can always optimize once you have specific workloads that require some LLM endpoint (whole other ball game). I **still** haven't tried Gemini but I did see a tweet that said something like "Gemini is beating everyone in the benchmarks and still nobody uses it". That made me laugh. Also, as an aside, I actually personally prefer codex 5.3 these days but our internal tooling is currently Claude Code... so, Claude for work, Codex for pleasure.
+The latest wave of releases are a **real** step function improvement, especially for well defined software engineering tasks. If you've played with these models in the past and found them lacking, you should revisit ASAP. Databricks now has a first class [AI Gateway feature](https://docs.databricks.com/aws/en/ai-gateway/coding-agent-integration-beta) that makes hooking these models up to your choice of harness/IDE a breeze.
+
+As for me? I've since tried Sonnet, and it's great, but, once you get a taste for the best models... why bother changing? For daily driving I think you want the best model possible - you can always optimize once you have specific workloads that require some LLM endpoint (whole other ball game). I **still** haven't tried Gemini but I did see a tweet that said something like "Gemini is beating everyone in the benchmarks and still nobody uses it". That made me laugh. Also, as an aside, I actually personally prefer codex 5.3 these days but our internal tooling is currently Claude Code... so, Claude for work, Codex for pleasure.
 
 ## Stateless Streaming Performance
 
@@ -89,7 +91,7 @@ I've since tried Sonnet, and it's great, but, once you get a taste for the best 
 >
 > **Try it** Nothing to do — these are enabled by default on DBR 18.0+. Check your streaming query's execution plan to see AQE and optimized shuffle in action.
 
-LOL. Thank you Holly, as always, for putting up with me :). As for real time streaming and performance... this is a REAL sleeper. Ali's been hammering this point on LI: Spark is now as good and in many places better than the other streaming engines. If you have stuff in Flink or w/e else, but you have access to Databricks... stop doing that!
+Hiding in these awesome performance improvements is the reality that Spark is now as good and in many places better than other streaming solutions. Spark is now a beast in the real time streaming category — not only can you do the standard heavy minibatch style streaming work, but you can also do extremely low latency work, AND all that in a single unified API. That is to say: one engine, one API, batch, mini-batch, and real-time. If you're using Flink et. al. but you have access to Databricks... you need to give Spark Streaming another look.
 
 ## MLflow Traces to Delta via Unity Catalog
 
@@ -109,7 +111,7 @@ Our trace story has been evolving. We've gone through a few iterations where one
 >
 > **Try it** Wrap your statements in `BEGIN TRANSACTION` / `COMMIT`. Works in notebooks, SQL editor, and dbSQL. No configuration needed.
 
-I really want multi TABLE transactions but I'll definitely settle for this milestone for now. There's not much to say here because as a feature in the warehouse ecosystem, it's well known. For Databricks users specifically it's been a painful gap and now it's CLOSED. Thank god. On to multi-table...
+I really want multi TABLE transactions but I'll definitely settle for this milestone for now. There's not much to say here because as a feature in the warehouse ecosystem, it's well known. For Databricks users specifically it's been a painful gap and now it's CLOSED. That means, if you have outstanding jobs you haven't yet migrated because... you couldn't, well, now you can! Thank god. On to multi-table...
 
 ## Supervisor Agent (GA)
 
@@ -119,7 +121,7 @@ I really want multi TABLE transactions but I'll definitely settle for this miles
 >
 > **Try it** Go to Machine Learning > Agent Bricks > Supervisor Agent. Select up to 20 agents or tools from your workspace, give it a system prompt, and deploy. Test it in the playground before serving.
 
-An amazing tool for composing agents without touching a keyboard, CLI, or code. If your finding that your workspace has multiple useful genie spaces, agents, etc. ... combine them using this tool!!
+An amazing tool for composing agents without touching a keyboard, CLI, or code. If you're finding that your workspace has multiple useful genie spaces, agents, etc. ... combine them using this tool!! Not only does this feature help shepherd the imminent agent sprawl problem, it also helps reuse solutions created elsewhere. Modularity as a SWE principle looks to be safe in the new AI world... for now.
 
 ## Metric Views — Window Functions and Filters
 
@@ -129,5 +131,5 @@ An amazing tool for composing agents without touching a keyboard, CLI, or code. 
 >
 > **Try it** Navigate to your catalog, find or create a metric view, and use the new UI editor to define measures with window functions. Connect the metric view to a Genie space for natural language querying.
 
-Metric views are the tool to define your semantic layer with. Technically speaking they're not a new functionality, you could have always made other tables, views, etc. and just made a contract to treat those as the semantic layer. But, having these as 1st class entities in Databricks really makes that contract real and formal. Excellent feature broadly speaking, and the continuous expansion of the types of things you can define with these metric views means its something you can really trust.
+Metric views are how you define your semantic layer on Databricks. Could you have always done this with tables, views, and a README.md? Sure. But that's how you get drift, inconsistency, and zero enforcement: because there was no first class feature, only something you could implement. Metric views as 1st class entities in Databricks makes that contract real and formal. Excellent feature broadly speaking, and the continuous expansion of the types of things you can define with these metric views means it's something you can really trust to be the source of truth.
 
