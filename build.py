@@ -242,8 +242,12 @@ def render_episode(meta, blocks):
             continue
 
         if block["type"] == "human":
-            body_parts.append(f'  <div class="human">\n    <div class="human-label"><img src="/images/nick_LI.jpeg" alt="Nick"> Director\'s Commentary (Nick)</div>\n    {block["html"]}\n  </div>')
-            i += 1
+            # Collect consecutive human blocks into one commentary div
+            human_parts = []
+            while i < len(blocks) and blocks[i]["type"] == "human":
+                human_parts.append(f'    {blocks[i]["html"]}')
+                i += 1
+            body_parts.append(f'  <div class="human">\n    <div class="human-label"><img src="/images/nick_LI.jpeg" alt="Nick"> Director\'s Commentary (Nick)</div>\n' + '\n'.join(human_parts) + '\n  </div>')
             continue
 
         i += 1
@@ -323,6 +327,7 @@ TEMPLATE = """<!DOCTYPE html>
   .human {{ font-size: 1.05rem; color: var(--human-text); line-height: 1.8; padding: 0 0.25rem; }}
   .human-label {{ display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; }}
   .human-label img {{ width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }}
+  .human p + p {{ margin-top: 0.75rem; }}
   .human strong {{ font-weight: 600; }}
   .architecture {{ background: var(--machine-bg); border: 1px solid var(--machine-border); border-radius: var(--radius); padding: 1.5rem; position: relative; }}
   .architecture::before {{ content: 'CLAUDE OPUS 4.6'; position: absolute; top: -0.65rem; left: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; color: var(--accent); background: var(--bg); border: 1px solid var(--machine-border); padding: 0.15rem 0.6rem; border-radius: 99px; }}
@@ -520,6 +525,9 @@ function makePlayerOpts(elId) {{
           setTimeout(function() {{ switchToAbsolute(); applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top)); }}, 50);
           activePlayer.playVideo();
         }}
+        // Pause the inactive player so it doesn't run in background
+        if (sidebarMode && thisPlayer === player) thisPlayer.pauseVideo();
+        if (!sidebarMode && thisPlayer === sidebarPlayer) thisPlayer.pauseVideo();
       }},
       onStateChange: function(e) {{
         var icon = (e.data === YT.PlayerState.PLAYING) ? '\u23F8' : '\u25B6';
@@ -563,6 +571,15 @@ function toggleMute() {{
 }}
 pipMute.addEventListener('click', toggleMute);
 if (vsMute) vsMute.addEventListener('click', toggleMute);
+
+// Sync mute button icon with YouTube native controls
+setInterval(function() {{
+  if (!isReady || !activePlayer || !activePlayer.isMuted) return;
+  var muted = activePlayer.isMuted();
+  var icon = muted ? '&#128263;' : '&#128266;';
+  pipMute.innerHTML = icon;
+  if (vsMute) vsMute.innerHTML = icon;
+}}, 500);
 
 pipClose.addEventListener('click', function() {{
   pip.classList.add('hidden');
@@ -830,6 +847,7 @@ function checkBreakpoint() {{
       var t = sidebarPlayer.getCurrentTime();
       var wasMuted = sidebarPlayer.isMuted();
       sidebarPlayer.pauseVideo();
+      player.mute();
       player.seekTo(t, true);
       player.playVideo();
       if (!wasMuted) {{ player.unMute(); player.setVolume(80); }}
@@ -843,9 +861,12 @@ function checkBreakpoint() {{
     if (sidebarPlayer) {{
       if (player && player.getCurrentTime) {{
         var t = player.getCurrentTime();
+        var wasMuted = player.isMuted();
+        player.pauseVideo();
+        sidebarPlayer.mute();
         sidebarPlayer.seekTo(t, true);
         sidebarPlayer.playVideo();
-        if (player && !player.isMuted()) {{ sidebarPlayer.unMute(); sidebarPlayer.setVolume(80); }}
+        if (!wasMuted) {{ sidebarPlayer.unMute(); sidebarPlayer.setVolume(80); }}
       }}
       activePlayer = sidebarPlayer;
       sidebarMode = true;
@@ -880,10 +901,11 @@ if (pipDock) {{
     var wasMuted = player ? player.isMuted() : true;
     if (player) player.pauseVideo();
     
+    sidebarPlayer.mute();
     sidebarPlayer.seekTo(t, true);
     sidebarPlayer.playVideo();
     if (!wasMuted) {{ sidebarPlayer.unMute(); sidebarPlayer.setVolume(80); }}
-    
+
     activePlayer = sidebarPlayer;
     sidebarMode = true;
     
@@ -916,6 +938,7 @@ if (vsDetach) vsDetach.addEventListener('click', function() {{
     switchToAbsolute();
     applyPos(parseFloat(pip.style.left), parseFloat(pip.style.top));
     if (player && player.seekTo) {{
+      player.mute();
       player.seekTo(t, true);
       player.playVideo();
       if (!wasMuted) {{ player.unMute(); player.setVolume(80); }}
